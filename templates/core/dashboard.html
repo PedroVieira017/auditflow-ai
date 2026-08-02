@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Visão geral — AuditFlow AI{% endblock %}
+
+{% block content %}
+<h1>Visão geral</h1>
+<p>Organização: {{ organization.name }}</p>
+<p>Este é um resumo operacional dos dados processados. Não representa uma avaliação global do risco, dos controlos ou das contas da organização.</p>
+
+<section aria-labelledby="imports-summary">
+    <h2 id="imports-summary">Importações</h2>
+    <dl>
+        <dt>Total</dt>
+        <dd>{{ dashboard.import_counts.total }}</dd>
+        <dt>Concluídas</dt>
+        <dd>{{ dashboard.import_counts.completed }}</dd>
+        <dt>Com erros</dt>
+        <dd>{{ dashboard.import_counts.failed }}</dd>
+        <dt>Pendentes ou em processamento</dt>
+        <dd>{{ dashboard.import_counts.in_progress }}</dd>
+    </dl>
+    <p><a href="{% url 'imports:upload' organization.id %}">Carregar novas faturas</a></p>
+</section>
+
+<section aria-labelledby="alerts-summary">
+    <h2 id="alerts-summary">Alertas por estado</h2>
+    <dl>
+        <dt>Total</dt>
+        <dd>{{ dashboard.alert_counts.total }}</dd>
+        <dt>Decisões pendentes</dt>
+        <dd>{{ dashboard.alert_counts.new }}</dd>
+        <dt>Válidos</dt>
+        <dd>{{ dashboard.alert_counts.valid }}</dd>
+        <dt>Falsos positivos</dt>
+        <dd>{{ dashboard.alert_counts.false_positive }}</dd>
+        <dt>Resolvidos</dt>
+        <dd>{{ dashboard.alert_counts.resolved }}</dd>
+    </dl>
+
+    <h3>Alertas por prioridade</h3>
+    <dl>
+        <dt>Baixa</dt>
+        <dd>{{ dashboard.alert_counts.low }}</dd>
+        <dt>Média</dt>
+        <dd>{{ dashboard.alert_counts.medium }}</dd>
+        <dt>Alta</dt>
+        <dd>{{ dashboard.alert_counts.high }}</dd>
+        <dt>Crítica</dt>
+        <dd>{{ dashboard.alert_counts.critical }}</dd>
+    </dl>
+    <p><a href="{% url 'alerts:list' organization.id %}">Consultar todos os alertas</a></p>
+</section>
+
+<section aria-labelledby="recent-alerts">
+    <h2 id="recent-alerts">Alertas recentes</h2>
+    {% if dashboard.recent_alerts %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Alerta</th>
+                    <th>Prioridade</th>
+                    <th>Estado</th>
+                    <th>Importação</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alert in dashboard.recent_alerts %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'alerts:detail' organization.id alert.id %}">
+                                {{ alert.title }}
+                            </a>
+                        </td>
+                        <td>{{ alert.get_severity_display }}</td>
+                        <td>{{ alert.get_status_display }}</td>
+                        <td>{{ alert.rule_run.import_batch.original_filename }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Ainda não existem alertas nesta organização.</p>
+    {% endif %}
+</section>
+
+<section aria-labelledby="recent-imports">
+    <h2 id="recent-imports">Importações recentes</h2>
+    {% if dashboard.recent_imports %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Ficheiro</th>
+                    <th>Estado</th>
+                    <th>Linhas</th>
+                    <th>Recebido em</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for import_batch in dashboard.recent_imports %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'imports:detail' organization.id import_batch.id %}">
+                                {{ import_batch.original_filename }}
+                            </a>
+                        </td>
+                        <td>{{ import_batch.get_status_display }}</td>
+                        <td>{{ import_batch.row_count }}</td>
+                        <td>{{ import_batch.created_at|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Ainda não existem importações. Carregue um ficheiro CSV para iniciar a primeira análise.</p>
+    {% endif %}
+</section>
+{% endblock %}

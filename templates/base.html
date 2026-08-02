@@ -13,6 +13,7 @@
         {% endif %}
         {% if organization %}
             <nav aria-label="Navegação da organização">
+                <a href="{% url 'core:dashboard' organization.id %}">Visão geral</a>
                 <a href="{% url 'imports:upload' organization.id %}">Carregar faturas</a>
                 <a href="{% url 'alerts:list' organization.id %}">Alertas</a>
             </nav>
