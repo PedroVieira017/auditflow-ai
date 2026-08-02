@@ -88,7 +88,7 @@ class AlertViewsTests(TestCase):
             email="outra-empresa@example.com",
             password="password",
         )
-        other_batch = self.create_import_batch(
+        self.other_batch = self.create_import_batch(
             organization=self.other_organization,
             uploaded_by=other_user,
             filename="dados-confidenciais.csv",
@@ -96,7 +96,7 @@ class AlertViewsTests(TestCase):
         )
         other_run = self.create_rule_run(
             organization=self.other_organization,
-            import_batch=other_batch,
+            import_batch=self.other_batch,
         )
         self.other_alert = Alert.objects.create(
             organization=self.other_organization,
@@ -238,12 +238,144 @@ class AlertViewsTests(TestCase):
             )
         self.client.force_login(self.user)
 
-        first_page = self.client.get(self.list_url)
-        second_page = self.client.get(self.list_url, {"page": 2})
+        first_page = self.client.get(
+            self.list_url,
+            {"status": Alert.Status.NEW},
+        )
+        second_page = self.client.get(
+            self.list_url,
+            {"status": Alert.Status.NEW, "page": 2},
+        )
 
         self.assertEqual(first_page.context["page"].paginator.count, 26)
         self.assertEqual(len(first_page.context["page"].object_list), 25)
         self.assertEqual(len(second_page.context["page"].object_list), 1)
+        self.assertContains(first_page, "status=new&amp;page=2", html=False)
+
+    def test_alerts_can_be_filtered_by_status_and_priority(self):
+        resolved_alert = Alert.objects.create(
+            organization=self.organization,
+            rule_run=self.rule_run,
+            fingerprint="3" * 64,
+            title="Alerta resolvido de prioridade alta",
+            explanation="Resultado adicional para testar os filtros.",
+            status=Alert.Status.RESOLVED,
+            severity=Severity.HIGH,
+        )
+        self.client.force_login(self.user)
+
+        new_response = self.client.get(
+            self.list_url,
+            {"status": Alert.Status.NEW},
+        )
+        high_response = self.client.get(
+            self.list_url,
+            {"severity": Severity.HIGH},
+        )
+        combined_response = self.client.get(
+            self.list_url,
+            {
+                "status": Alert.Status.RESOLVED,
+                "severity": Severity.HIGH,
+            },
+        )
+
+        self.assertContains(new_response, self.alert.title)
+        self.assertNotContains(new_response, resolved_alert.title)
+        self.assertContains(high_response, resolved_alert.title)
+        self.assertNotContains(high_response, self.alert.title)
+        self.assertEqual(combined_response.context["page"].paginator.count, 1)
+        self.assertContains(combined_response, resolved_alert.title)
+
+    def test_alerts_can_be_filtered_by_import(self):
+        second_batch = self.create_import_batch(
+            organization=self.organization,
+            uploaded_by=self.user,
+            filename="segunda-importacao.csv",
+            file_hash="c" * 64,
+        )
+        second_run = self.create_rule_run(
+            organization=self.organization,
+            import_batch=second_batch,
+        )
+        second_alert = Alert.objects.create(
+            organization=self.organization,
+            rule_run=second_run,
+            fingerprint="4" * 64,
+            title="Alerta da segunda importação",
+            explanation="Resultado associado a outra importação da mesma empresa.",
+            severity=Severity.LOW,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            self.list_url,
+            {"import_batch": str(second_batch.id)},
+        )
+
+        self.assertEqual(response.context["page"].paginator.count, 1)
+        self.assertContains(response, second_alert.title)
+        self.assertNotContains(response, self.alert.title)
+
+    def test_search_matches_alert_rule_import_supplier_and_invoice(self):
+        self.client.force_login(self.user)
+        searches = (
+            "Possíveis faturas",
+            "Faturas potencialmente",
+            "faturas-agosto",
+            "Fornecedor Principal",
+            "PT500000001",
+            "FT 2026/100",
+        )
+
+        for query in searches:
+            with self.subTest(query=query):
+                response = self.client.get(self.list_url, {"query": query})
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.context["page"].paginator.count, 1)
+                self.assertContains(response, self.alert.title)
+
+    def test_search_does_not_duplicate_alert_with_multiple_matching_evidence(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            self.list_url,
+            {"query": "Fornecedor Principal"},
+        )
+
+        self.assertEqual(response.context["page"].paginator.count, 1)
+        self.assertEqual(list(response.context["page"].object_list), [self.alert])
+
+    def test_search_without_results_shows_filtered_empty_state(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            self.list_url,
+            {"query": "resultado inexistente"},
+        )
+
+        self.assertEqual(response.context["page"].paginator.count, 0)
+        self.assertContains(response, "Nenhum alerta corresponde aos critérios")
+        self.assertContains(response, "Limpar filtros")
+
+    def test_invalid_filters_are_rejected_without_exposing_other_organization(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            self.list_url,
+            {
+                "status": "invalid",
+                "import_batch": str(self.other_batch.id),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["filter_form"].errors)
+        self.assertFalse(response.context["filters_applied"])
+        self.assertContains(response, self.alert.title)
+        self.assertNotContains(response, self.other_alert.title)
+        self.assertNotContains(response, self.other_batch.original_filename)
 
     def test_detail_shows_rule_explanation_action_and_all_evidence(self):
         self.client.force_login(self.user)

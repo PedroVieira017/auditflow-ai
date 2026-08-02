@@ -6,6 +6,14 @@
 <h1>Alertas</h1>
 <p>Organização: {{ organization.name }}</p>
 
+<form method="get">
+    {{ filter_form.as_p }}
+    <button type="submit">Aplicar filtros</button>
+    {% if filters_applied or filter_form.errors %}
+        <a href="{% url 'alerts:list' organization.id %}">Limpar filtros</a>
+    {% endif %}
+</form>
+
 {% if page.object_list %}
     <p>{{ page.paginator.count }} alerta{{ page.paginator.count|pluralize }} encontrado{{ page.paginator.count|pluralize }}.</p>
     <table>
@@ -33,7 +41,11 @@
                         {{ alert.rule_run.rule_definition.name }}
                         v{{ alert.rule_run.rule_definition.version }}
                     </td>
-                    <td>{{ alert.rule_run.import_batch.original_filename }}</td>
+                    <td>
+                        <a href="{% url 'imports:detail' organization.id alert.rule_run.import_batch.id %}">
+                            {{ alert.rule_run.import_batch.original_filename }}
+                        </a>
+                    </td>
                     <td>{{ alert.created_at|date:"d/m/Y H:i" }}</td>
                 </tr>
             {% endfor %}
@@ -43,14 +55,16 @@
     {% if page.has_other_pages %}
         <nav aria-label="Paginação dos alertas">
             {% if page.has_previous %}
-                <a href="?page={{ page.previous_page_number }}">Anterior</a>
+                <a href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page.previous_page_number }}">Anterior</a>
             {% endif %}
             <span>Página {{ page.number }} de {{ page.paginator.num_pages }}</span>
             {% if page.has_next %}
-                <a href="?page={{ page.next_page_number }}">Seguinte</a>
+                <a href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page.next_page_number }}">Seguinte</a>
             {% endif %}
         </nav>
     {% endif %}
+{% elif filters_applied or filter_form.errors %}
+    <p>Nenhum alerta corresponde aos critérios indicados.</p>
 {% else %}
     <p>Ainda não existem alertas nesta organização.</p>
 {% endif %}

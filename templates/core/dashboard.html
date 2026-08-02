@@ -26,27 +26,27 @@
     <h2 id="alerts-summary">Alertas por estado</h2>
     <dl>
         <dt>Total</dt>
-        <dd>{{ dashboard.alert_counts.total }}</dd>
+        <dd><a href="{% url 'alerts:list' organization.id %}">{{ dashboard.alert_counts.total }}</a></dd>
         <dt>Decisões pendentes</dt>
-        <dd>{{ dashboard.alert_counts.new }}</dd>
+        <dd><a href="{% url 'alerts:list' organization.id %}?status=new">{{ dashboard.alert_counts.new }}</a></dd>
         <dt>Válidos</dt>
-        <dd>{{ dashboard.alert_counts.valid }}</dd>
+        <dd><a href="{% url 'alerts:list' organization.id %}?status=valid">{{ dashboard.alert_counts.valid }}</a></dd>
         <dt>Falsos positivos</dt>
-        <dd>{{ dashboard.alert_counts.false_positive }}</dd>
+        <dd><a href="{% url 'alerts:list' organization.id %}?status=false_positive">{{ dashboard.alert_counts.false_positive }}</a></dd>
         <dt>Resolvidos</dt>
-        <dd>{{ dashboard.alert_counts.resolved }}</dd>
+        <dd><a href="{% url 'alerts:list' organization.id %}?status=resolved">{{ dashboard.alert_counts.resolved }}</a></dd>
     </dl>
 
     <h3>Alertas por prioridade</h3>
     <dl>
         <dt>Baixa</dt>
-        <dd>{{ dashboard.alert_counts.low }}</dd>
+        <dd><a href="{% url 'alerts:list' organization.id %}?severity=low">{{ dashboard.alert_counts.low }}</a></dd>
         <dt>Média</dt>
-        <dd>{{ dashboard.alert_counts.medium }}</dd>
+        <dd><a href="{% url 'alerts:list' organization.id %}?severity=medium">{{ dashboard.alert_counts.medium }}</a></dd>
         <dt>Alta</dt>
-        <dd>{{ dashboard.alert_counts.high }}</dd>
+        <dd><a href="{% url 'alerts:list' organization.id %}?severity=high">{{ dashboard.alert_counts.high }}</a></dd>
         <dt>Crítica</dt>
-        <dd>{{ dashboard.alert_counts.critical }}</dd>
+        <dd><a href="{% url 'alerts:list' organization.id %}?severity=critical">{{ dashboard.alert_counts.critical }}</a></dd>
     </dl>
     <p><a href="{% url 'alerts:list' organization.id %}">Consultar todos os alertas</a></p>
 </section>

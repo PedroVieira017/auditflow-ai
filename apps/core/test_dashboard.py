@@ -190,6 +190,8 @@ class OrganizationDashboardTests(TestCase):
             kwargs={"organization_id": self.organization.id},
         )
         self.assertContains(response, alert_list_url)
+        self.assertContains(response, f"{alert_list_url}?status=new")
+        self.assertContains(response, f"{alert_list_url}?severity=critical")
         self.assertNotContains(response, "Alerta confidencial")
         self.assertNotContains(response, "ficheiro-secreto.csv")
 

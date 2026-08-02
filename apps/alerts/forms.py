@@ -1,6 +1,53 @@
 from django import forms
+from django.utils import timezone
+
+from apps.core.choices import Severity
+from apps.imports.models import ImportBatch
 
 from .models import Alert
+
+
+class ImportBatchChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        created_at = timezone.localtime(obj.created_at)
+        return f"{obj.original_filename} — {created_at:%d/%m/%Y %H:%M}"
+
+
+class AlertFilterForm(forms.Form):
+    query = forms.CharField(
+        label="Pesquisar",
+        required=False,
+        max_length=100,
+        strip=True,
+        widget=forms.TextInput(
+            attrs={"placeholder": "Alerta, fornecedor, fatura ou ficheiro"}
+        ),
+    )
+    status = forms.ChoiceField(
+        label="Estado",
+        required=False,
+        choices=(("", "Todos os estados"), *Alert.Status.choices),
+    )
+    severity = forms.ChoiceField(
+        label="Prioridade",
+        required=False,
+        choices=(("", "Todas as prioridades"), *Severity.choices),
+    )
+    import_batch = ImportBatchChoiceField(
+        label="Importação",
+        required=False,
+        queryset=ImportBatch.objects.none(),
+        empty_label="Todas as importações",
+    )
+
+    def __init__(self, *args, organization, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["import_batch"].queryset = (
+            ImportBatch.objects.for_organization(organization)
+            .filter(rule_runs__alerts__isnull=False)
+            .distinct()
+            .order_by("-created_at")
+        )
 
 
 class AlertStatusForm(forms.Form):
