@@ -3,118 +3,126 @@
 {% block title %}{{ alert.title }} — AuditFlow AI{% endblock %}
 
 {% block content %}
-<p><a href="{% url 'alerts:list' organization.id %}">← Voltar aos alertas</a></p>
+<a class="back-link" href="{% url 'alerts:list' organization.id %}">← Voltar aos alertas</a>
 
-<h1>{{ alert.title }}</h1>
-<dl>
-    <dt>Organização</dt>
-    <dd>{{ organization.name }}</dd>
-    <dt>Prioridade</dt>
-    <dd>{{ alert.get_severity_display }}</dd>
-    <dt>Estado</dt>
-    <dd>{{ alert.get_status_display }}</dd>
-    <dt>Teste executado</dt>
-    <dd>
-        {{ alert.rule_run.rule_definition.name }}
-        ({{ alert.rule_run.rule_definition.key }}
-        v{{ alert.rule_run.rule_definition.version }})
-    </dd>
-    <dt>Importação</dt>
-    <dd>
-        <a href="{% url 'imports:detail' organization.id alert.rule_run.import_batch.id %}">
-            {{ alert.rule_run.import_batch.original_filename }}
-        </a>
-    </dd>
-    <dt>Identificador rastreável</dt>
-    <dd><code>{{ alert.fingerprint }}</code></dd>
-</dl>
+<header class="page-header">
+    <div class="page-header__copy">
+        <span class="eyebrow">Detalhe do alerta</span>
+        <h1>{{ alert.title }}</h1>
+        <p class="page-description">
+            Exceção identificada pela regra {{ alert.rule_run.rule_definition.key }}, versão {{ alert.rule_run.rule_definition.version }}.
+        </p>
+    </div>
+    <div class="page-actions">
+        <span class="badge badge--{{ alert.severity }}">Prioridade {{ alert.get_severity_display }}</span>
+        <span class="badge badge--{{ alert.status }}">{{ alert.get_status_display }}</span>
+    </div>
+</header>
 
-<h2>O que foi encontrado</h2>
-<p>{{ alert.explanation }}</p>
+<section class="summary-strip" aria-label="Resumo do alerta">
+    <div class="summary-strip__item"><span class="summary-strip__label">Estado</span><span class="summary-strip__value"><span class="badge badge--{{ alert.status }}">{{ alert.get_status_display }}</span></span></div>
+    <div class="summary-strip__item"><span class="summary-strip__label">Prioridade</span><span class="summary-strip__value">{{ alert.get_severity_display }}</span></div>
+    <div class="summary-strip__item"><span class="summary-strip__label">Teste executado</span><span class="summary-strip__value">{{ alert.rule_run.rule_definition.name }}</span></div>
+    <div class="summary-strip__item"><span class="summary-strip__label">Importação</span><a class="summary-strip__value" href="{% url 'imports:detail' organization.id alert.rule_run.import_batch.id %}">{{ alert.rule_run.import_batch.original_filename }}</a></div>
+</section>
 
-{% if alert.recommended_action %}
-    <h2>Ação recomendada</h2>
-    <p>{{ alert.recommended_action }}</p>
-{% endif %}
+<div class="grid-sidebar">
+    <div>
+        <section class="panel" aria-labelledby="finding-title">
+            <div class="panel__header"><div><h2 id="finding-title">O que foi encontrado</h2><p>Resultado factual produzido pela regra.</p></div></div>
+            <div class="panel__body">
+                <p style="font-size: 15px; color: var(--ink-700);">{{ alert.explanation }}</p>
+                {% if alert.recommended_action %}
+                    <div class="callout">
+                        <span class="callout__icon" aria-hidden="true">→</span>
+                        <div><strong>Ação recomendada</strong><p>{{ alert.recommended_action }}</p></div>
+                    </div>
+                {% endif %}
+                <dl class="detail-list" style="margin-top: 16px;">
+                    <div><dt>Organização</dt><dd>{{ organization.name }}</dd></div>
+                    <div><dt>Regra</dt><dd><code>{{ alert.rule_run.rule_definition.key }} v{{ alert.rule_run.rule_definition.version }}</code></dd></div>
+                    <div style="grid-column: 1 / -1;"><dt>Identificador rastreável</dt><dd class="hash-box"><code>{{ alert.fingerprint }}</code></dd></div>
+                </dl>
+            </div>
+        </section>
 
-<h2>Decisão humana</h2>
-{% if can_triage %}
-    <form method="post">
-        {% csrf_token %}
-        {{ status_form.as_p }}
-        <button type="submit">Registar decisão</button>
-    </form>
-{% else %}
-    <p>O seu perfil permite consultar, mas não alterar, este alerta.</p>
-{% endif %}
-
-<h3>Histórico de decisões</h3>
-{% if alert.status_events.all %}
-    <ol>
-        {% for event in alert.status_events.all %}
-            <li>
-                <p>
-                    <strong>{{ event.get_from_status_display }} → {{ event.get_to_status_display }}</strong>
-                    em {{ event.created_at|date:"d/m/Y H:i" }}
-                    por
-                    {% if event.changed_by %}
-                        {{ event.changed_by.email }}
-                    {% else %}
-                        utilizador removido
-                    {% endif %}
-                </p>
-                <p>{{ event.note }}</p>
-            </li>
-        {% endfor %}
-    </ol>
-{% else %}
-    <p>Ainda não foram registadas decisões humanas.</p>
-{% endif %}
-
-<h2>Evidências</h2>
-{% if alert.evidence.all %}
-    <table>
-        <thead>
-            <tr>
-                <th>Linha do ficheiro</th>
-                <th>Fornecedor</th>
-                <th>Número da fatura</th>
-                <th>Data</th>
-                <th>Valor</th>
-                <th>Factos usados</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for evidence in alert.evidence.all %}
-                <tr>
-                    <td>{{ evidence.invoice_record.source_row_number }}</td>
-                    <td>
-                        {% if evidence.invoice_record.supplier_name %}
-                            {{ evidence.invoice_record.supplier_name }}<br>
-                        {% endif %}
-                        <code>{{ evidence.invoice_record.supplier_identifier }}</code>
-                    </td>
-                    <td>{{ evidence.invoice_record.invoice_number }}</td>
-                    <td>{{ evidence.invoice_record.invoice_date|date:"d/m/Y" }}</td>
-                    <td>
-                        {{ evidence.invoice_record.gross_amount }}
-                        {{ evidence.invoice_record.currency }}
-                    </td>
-                    <td>
-                        <dl>
-                            {% for name, value in evidence.facts.items %}
-                                <dt>{{ name }}</dt>
-                                <dd>{{ value }}</dd>
+        <section class="panel section-space" aria-labelledby="evidence-title">
+            <div class="panel__header"><div><h2 id="evidence-title">Evidências</h2><p>Registos e factos usados para produzir este alerta.</p></div><span class="badge badge--info">{{ alert.evidence.all|length }} registo{{ alert.evidence.all|length|pluralize }}</span></div>
+            {% if alert.evidence.all %}
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead><tr><th>Linha</th><th>Fornecedor</th><th>Número da fatura</th><th>Data</th><th>Valor</th><th>Factos usados</th></tr></thead>
+                        <tbody>
+                            {% for evidence in alert.evidence.all %}
+                                <tr>
+                                    <td><span class="badge">{{ evidence.invoice_record.source_row_number }}</span></td>
+                                    <td>{% if evidence.invoice_record.supplier_name %}<span class="table-primary">{{ evidence.invoice_record.supplier_name }}</span>{% endif %}<span class="table-secondary mono">{{ evidence.invoice_record.supplier_identifier }}</span></td>
+                                    <td>{{ evidence.invoice_record.invoice_number }}</td>
+                                    <td>{{ evidence.invoice_record.invoice_date|date:"d/m/Y" }}</td>
+                                    <td><strong>{{ evidence.invoice_record.gross_amount }}</strong> {{ evidence.invoice_record.currency }}</td>
+                                    <td><dl class="facts-list">{% for name, value in evidence.facts.items %}<dt>{{ name }}</dt><dd>{{ value }}</dd>{% endfor %}</dl></td>
+                                </tr>
                             {% endfor %}
-                        </dl>
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-{% else %}
-    <p>Este alerta não possui evidências associadas.</p>
-{% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state"><h3>Sem evidências</h3><p>Este alerta não possui evidências associadas.</p></div>
+            {% endif %}
+        </section>
 
-<p>Este resultado assinala uma exceção aos critérios do teste. Não confirma, por si só, fraude, erro material ou deficiência de controlo.</p>
+        <div class="callout callout--warning section-space">
+            <span class="callout__icon" aria-hidden="true">!</span>
+            <div><strong>Interpretação limitada</strong><p>Este resultado assinala uma exceção aos critérios do teste. Não confirma, por si só, fraude, erro material ou deficiência de controlo.</p></div>
+        </div>
+    </div>
+
+    <aside>
+        <section class="panel" aria-labelledby="decision-title">
+            <div class="panel__header"><div><h2 id="decision-title">Decisão humana</h2><p>Registe a conclusão da verificação efetuada.</p></div></div>
+            <div class="panel__body">
+                {% if can_triage %}
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ status_form.non_field_errors }}
+                        {{ status_form.expected_status }}
+                        <div class="form-field">
+                            {{ status_form.status.label_tag }}
+                            {{ status_form.status }}
+                            {{ status_form.status.errors }}
+                        </div>
+                        <div class="form-field" style="margin-top: 14px;">
+                            {{ status_form.note.label_tag }}
+                            {{ status_form.note }}
+                            {{ status_form.note.errors }}
+                            {% if status_form.note.help_text %}<span class="helptext">{{ status_form.note.help_text }}</span>{% endif %}
+                        </div>
+                        <button class="button button--primary" style="width: 100%; margin-top: 16px;" type="submit">Registar decisão</button>
+                    </form>
+                {% else %}
+                    <div class="callout"><span class="callout__icon" aria-hidden="true">i</span><p>O seu perfil permite consultar, mas não alterar, este alerta.</p></div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="panel section-space" aria-labelledby="history-title">
+            <div class="panel__header"><div><h2 id="history-title">Histórico de decisões</h2><p>Cronologia imutável da revisão.</p></div></div>
+            <div class="panel__body">
+                {% if alert.status_events.all %}
+                    <ol class="decision-timeline">
+                        {% for event in alert.status_events.all %}
+                            <li>
+                                <strong>{{ event.get_from_status_display }} → {{ event.get_to_status_display }}</strong>
+                                <div class="decision-timeline__meta">{{ event.created_at|date:"d/m/Y H:i" }} · {% if event.changed_by %}{{ event.changed_by.email }}{% else %}utilizador removido{% endif %}</div>
+                                <p class="decision-timeline__note">{{ event.note }}</p>
+                            </li>
+                        {% endfor %}
+                    </ol>
+                {% else %}
+                    <div class="empty-state" style="padding: 24px 10px;"><p>Ainda não foram registadas decisões humanas.</p></div>
+                {% endif %}
+            </div>
+        </section>
+    </aside>
+</div>
 {% endblock %}

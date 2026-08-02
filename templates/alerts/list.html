@@ -3,69 +3,97 @@
 {% block title %}Alertas — AuditFlow AI{% endblock %}
 
 {% block content %}
-<h1>Alertas</h1>
-<p>Organização: {{ organization.name }}</p>
+<header class="page-header">
+    <div class="page-header__copy">
+        <span class="eyebrow">Monitorização</span>
+        <h1>Alertas</h1>
+        <p class="page-description">
+            Exceções encontradas pelas regras executadas sobre os dados da {{ organization.name }}.
+            Cada alerta requer contexto e, quando aplicável, revisão humana.
+        </p>
+    </div>
+    <div class="page-actions">
+        <a class="button button--primary" href="{% url 'imports:upload' organization.id %}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 13v6h14v-6"/></svg>
+            Nova importação
+        </a>
+    </div>
+</header>
 
-<form method="get">
-    {{ filter_form.as_p }}
-    <button type="submit">Aplicar filtros</button>
-    {% if filters_applied or filter_form.errors %}
-        <a href="{% url 'alerts:list' organization.id %}">Limpar filtros</a>
-    {% endif %}
+<form class="filter-bar" method="get">
+    {{ filter_form.non_field_errors }}
+    <div class="form-grid">
+        <div class="form-field form-field--wide">
+            {{ filter_form.query.label_tag }}
+            {{ filter_form.query }}
+            {{ filter_form.query.errors }}
+        </div>
+        <div class="form-field">
+            {{ filter_form.status.label_tag }}
+            {{ filter_form.status }}
+            {{ filter_form.status.errors }}
+        </div>
+        <div class="form-field">
+            {{ filter_form.severity.label_tag }}
+            {{ filter_form.severity }}
+            {{ filter_form.severity.errors }}
+        </div>
+        <div class="form-field form-field--wide">
+            {{ filter_form.import_batch.label_tag }}
+            {{ filter_form.import_batch }}
+            {{ filter_form.import_batch.errors }}
+        </div>
+        <div class="filter-bar__actions">
+            <button class="button" type="submit">Aplicar filtros</button>
+            {% if filters_applied or filter_form.errors %}
+                <a class="button button--ghost" href="{% url 'alerts:list' organization.id %}">Limpar filtros</a>
+            {% endif %}
+        </div>
+    </div>
 </form>
 
-{% if page.object_list %}
-    <p>{{ page.paginator.count }} alerta{{ page.paginator.count|pluralize }} encontrado{{ page.paginator.count|pluralize }}.</p>
-    <table>
-        <thead>
-            <tr>
-                <th>Prioridade</th>
-                <th>Alerta</th>
-                <th>Estado</th>
-                <th>Teste</th>
-                <th>Importação</th>
-                <th>Criado em</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for alert in page.object_list %}
-                <tr>
-                    <td>{{ alert.get_severity_display }}</td>
-                    <td>
-                        <a href="{% url 'alerts:detail' organization.id alert.id %}">
-                            {{ alert.title }}
-                        </a>
-                    </td>
-                    <td>{{ alert.get_status_display }}</td>
-                    <td>
-                        {{ alert.rule_run.rule_definition.name }}
-                        v{{ alert.rule_run.rule_definition.version }}
-                    </td>
-                    <td>
-                        <a href="{% url 'imports:detail' organization.id alert.rule_run.import_batch.id %}">
-                            {{ alert.rule_run.import_batch.original_filename }}
-                        </a>
-                    </td>
-                    <td>{{ alert.created_at|date:"d/m/Y H:i" }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<section class="panel" aria-labelledby="alerts-results">
+    <div class="panel__header">
+        <div>
+            <h2 id="alerts-results">Resultados</h2>
+            {% if page.object_list %}
+                <p>{{ page.paginator.count }} alerta{{ page.paginator.count|pluralize }} encontrado{{ page.paginator.count|pluralize }}.</p>
+            {% else %}
+                <p>Lista de exceções detetadas pelos controlos ativos.</p>
+            {% endif %}
+        </div>
+        {% if page.object_list %}<span class="badge badge--info">{{ page.paginator.count }} total</span>{% endif %}
+    </div>
 
-    {% if page.has_other_pages %}
-        <nav aria-label="Paginação dos alertas">
-            {% if page.has_previous %}
-                <a href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page.previous_page_number }}">Anterior</a>
-            {% endif %}
-            <span>Página {{ page.number }} de {{ page.paginator.num_pages }}</span>
-            {% if page.has_next %}
-                <a href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page.next_page_number }}">Seguinte</a>
-            {% endif %}
-        </nav>
+    {% if page.object_list %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr><th>Alerta</th><th>Prioridade</th><th>Estado</th><th>Teste</th><th>Importação</th><th>Criado em</th></tr></thead>
+                <tbody>
+                    {% for alert in page.object_list %}
+                        <tr>
+                            <td><a class="table-primary" href="{% url 'alerts:detail' organization.id alert.id %}">{{ alert.title }}</a><span class="table-secondary mono">{{ alert.fingerprint|truncatechars:18 }}</span></td>
+                            <td><span class="badge badge--{{ alert.severity }}">{{ alert.get_severity_display }}</span></td>
+                            <td><span class="badge badge--{{ alert.status }}">{{ alert.get_status_display }}</span></td>
+                            <td><span class="table-primary">{{ alert.rule_run.rule_definition.name }}</span><span class="table-secondary">v{{ alert.rule_run.rule_definition.version }}</span></td>
+                            <td><a href="{% url 'imports:detail' organization.id alert.rule_run.import_batch.id %}">{{ alert.rule_run.import_batch.original_filename }}</a></td>
+                            <td>{{ alert.created_at|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if page.has_other_pages %}
+            <nav class="pagination" aria-label="Paginação dos alertas">
+                {% if page.has_previous %}<a href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page.previous_page_number }}">Anterior</a>{% endif %}
+                <span>Página {{ page.number }} de {{ page.paginator.num_pages }}</span>
+                {% if page.has_next %}<a href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page.next_page_number }}">Seguinte</a>{% endif %}
+            </nav>
+        {% endif %}
+    {% elif filters_applied or filter_form.errors %}
+        <div class="empty-state"><div class="empty-state__icon" aria-hidden="true">⌕</div><h3>Sem resultados</h3><p>Nenhum alerta corresponde aos critérios indicados.</p></div>
+    {% else %}
+        <div class="empty-state"><div class="empty-state__icon" aria-hidden="true">✓</div><h3>Sem alertas</h3><p>Ainda não existem alertas nesta organização.</p></div>
     {% endif %}
-{% elif filters_applied or filter_form.errors %}
-    <p>Nenhum alerta corresponde aos critérios indicados.</p>
-{% else %}
-    <p>Ainda não existem alertas nesta organização.</p>
-{% endif %}
+</section>
 {% endblock %}

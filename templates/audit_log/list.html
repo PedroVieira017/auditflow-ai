@@ -3,101 +3,93 @@
 {% block title %}Registo de auditoria — AuditFlow AI{% endblock %}
 
 {% block content %}
-<h1>Registo de auditoria</h1>
-<p>Organização: {{ organization.name }}</p>
-<p>
-    Cronologia das ações registadas pelo AuditFlow AI. O registo documenta o que
-    aconteceu no sistema, mas não constitui uma conclusão profissional.
-</p>
+<header class="page-header">
+    <div class="page-header__copy">
+        <span class="eyebrow">Rastreabilidade</span>
+        <h1>Registo de auditoria</h1>
+        <p class="page-description">
+            Cronologia das ações registadas pelo AuditFlow AI para a {{ organization.name }}.
+            O registo documenta o que aconteceu no sistema, mas não constitui uma conclusão profissional.
+        </p>
+    </div>
+    <div class="page-actions">
+        <span class="badge badge--success">Registo ativo</span>
+    </div>
+</header>
 
-<form method="get">
-    {{ filter_form.action.label_tag }}
-    {{ filter_form.action }}
-    <button type="submit">Aplicar filtro</button>
-    {% if filters_applied or filter_form.errors %}
-        <a href="{% url 'audit_log:list' organization.id %}">Limpar filtro</a>
-    {% endif %}
-    {{ filter_form.action.errors }}
+<form class="filter-bar" method="get">
+    <div class="form-grid">
+        <div class="form-field form-field--wide">
+            {{ filter_form.action.label_tag }}
+            {{ filter_form.action }}
+            {{ filter_form.action.errors }}
+        </div>
+        <div class="filter-bar__actions">
+            <button class="button" type="submit">Aplicar filtro</button>
+            {% if filters_applied or filter_form.errors %}
+                <a class="button button--ghost" href="{% url 'audit_log:list' organization.id %}">Limpar filtro</a>
+            {% endif %}
+        </div>
+    </div>
 </form>
 
-{% if entries %}
-    <p>
-        {% if page.paginator.count == 1 %}
-            1 evento encontrado.
-        {% else %}
-            {{ page.paginator.count }} eventos encontrados.
-        {% endif %}
-    </p>
-    <table>
-        <thead>
-            <tr>
-                <th>Data</th>
-                <th>Ação</th>
-                <th>Utilizador</th>
-                <th>Recurso</th>
-                <th>Detalhes</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for entry in entries %}
-                <tr>
-                    <td>{{ entry.event.created_at|date:"d/m/Y H:i:s" }}</td>
-                    <td>
-                        {{ entry.action_label }}<br>
-                        <code>{{ entry.event.action }}</code>
-                    </td>
-                    <td>
-                        {% if entry.event.actor %}
-                            {{ entry.event.actor.email }}
-                        {% else %}
-                            Utilizador removido
-                        {% endif %}
-                    </td>
-                    <td>
-                        {{ entry.resource_label }}<br>
-                        {% if entry.event.resource_id %}
-                            <code>{{ entry.event.resource_id }}</code>
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if entry.details %}
-                            <dl>
-                                {% for detail in entry.details %}
-                                    <dt>{{ detail.label }}</dt>
-                                    <dd>
-                                        {% if detail.monospace %}
-                                            <code>{{ detail.value }}</code>
-                                        {% else %}
-                                            {{ detail.value }}
-                                        {% endif %}
-                                    </dd>
-                                {% endfor %}
-                            </dl>
-                        {% else %}
-                            Sem detalhes adicionais.
-                        {% endif %}
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<section class="panel" aria-labelledby="audit-results">
+    <div class="panel__header">
+        <div>
+            <h2 id="audit-results">Cronologia de eventos</h2>
+            {% if entries %}
+                <p>{% if page.paginator.count == 1 %}1 evento encontrado.{% else %}{{ page.paginator.count }} eventos encontrados.{% endif %}</p>
+            {% else %}
+                <p>Ações operacionais e decisões preservadas por ordem cronológica.</p>
+            {% endif %}
+        </div>
+        {% if entries %}<span class="badge badge--info">Página {{ page.number }}</span>{% endif %}
+    </div>
 
-    {% if page.has_other_pages %}
-        <nav aria-label="Paginação do registo de auditoria">
-            {% if page.has_previous %}
-                <a href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page.previous_page_number }}">Anterior</a>
-            {% endif %}
-            <span>Página {{ page.number }} de {{ page.paginator.num_pages }}</span>
-            {% if page.has_next %}
-                <a href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page.next_page_number }}">Seguinte</a>
-            {% endif %}
-        </nav>
+    {% if entries %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr><th>Data</th><th>Ação</th><th>Utilizador</th><th>Recurso</th><th>Detalhes</th></tr></thead>
+                <tbody>
+                    {% for entry in entries %}
+                        <tr>
+                            <td style="white-space: nowrap;">{{ entry.event.created_at|date:"d/m/Y H:i:s" }}</td>
+                            <td>
+                                <div class="audit-action">
+                                    <span class="audit-action__icon" aria-hidden="true">{{ forloop.revcounter }}</span>
+                                    <span><strong class="table-primary">{{ entry.action_label }}</strong><code class="table-secondary">{{ entry.event.action }}</code></span>
+                                </div>
+                            </td>
+                            <td>{% if entry.event.actor %}{{ entry.event.actor.email }}{% else %}Utilizador removido{% endif %}</td>
+                            <td><span class="table-primary">{{ entry.resource_label }}</span>{% if entry.event.resource_id %}<code class="table-secondary">{{ entry.event.resource_id }}</code>{% else %}<span class="table-secondary">—</span>{% endif %}</td>
+                            <td>
+                                {% if entry.details %}
+                                    <dl class="audit-details">
+                                        {% for detail in entry.details %}
+                                            <dt>{{ detail.label }}</dt>
+                                            <dd>{% if detail.monospace %}<code>{{ detail.value }}</code>{% else %}{{ detail.value }}{% endif %}</dd>
+                                        {% endfor %}
+                                    </dl>
+                                {% else %}
+                                    <span class="table-secondary">Sem detalhes adicionais.</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if page.has_other_pages %}
+            <nav class="pagination" aria-label="Paginação do registo de auditoria">
+                {% if page.has_previous %}<a href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page.previous_page_number }}">Anterior</a>{% endif %}
+                <span>Página {{ page.number }} de {{ page.paginator.num_pages }}</span>
+                {% if page.has_next %}<a href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page.next_page_number }}">Seguinte</a>{% endif %}
+            </nav>
+        {% endif %}
+    {% elif filters_applied or filter_form.errors %}
+        <div class="empty-state"><div class="empty-state__icon" aria-hidden="true">⌕</div><h3>Sem resultados</h3><p>Nenhum evento corresponde ao filtro indicado.</p></div>
+    {% else %}
+        <div class="empty-state"><div class="empty-state__icon" aria-hidden="true">◇</div><h3>Sem atividade</h3><p>Ainda não existem eventos de auditoria nesta organização.</p></div>
     {% endif %}
-{% elif filters_applied or filter_form.errors %}
-    <p>Nenhum evento corresponde ao filtro indicado.</p>
-{% else %}
-    <p>Ainda não existem eventos de auditoria nesta organização.</p>
-{% endif %}
+</section>
 {% endblock %}

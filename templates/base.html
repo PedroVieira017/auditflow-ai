@@ -1,30 +1,121 @@
+{% load static %}
 <!doctype html>
 <html lang="pt">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <meta name="theme-color" content="#10243f">
     <title>{% block title %}AuditFlow AI{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
 </head>
-<body>
-    <header>
-        <strong>AuditFlow AI</strong>
-        {% if user.is_authenticated %}
-            <span>{{ user.email }}</span>
-        {% endif %}
-        {% if organization %}
-            <nav aria-label="Navegação da organização">
-                <a href="{% url 'core:dashboard' organization.id %}">Visão geral</a>
-                <a href="{% url 'imports:upload' organization.id %}">Carregar faturas</a>
-                <a href="{% url 'alerts:list' organization.id %}">Alertas</a>
-                <a href="{% url 'audit_log:list' organization.id %}">Registo de auditoria</a>
-            </nav>
-        {% endif %}
-    </header>
-    <main>
-        {% for message in messages %}
-            <p role="status">{{ message }}</p>
-        {% endfor %}
-        {% block content %}{% endblock %}
-    </main>
+<body class="{% if organization %}app-body{% else %}auth-body{% endif %}">
+    <a class="skip-link" href="#main-content">Saltar para o conteúdo</a>
+
+    {% if organization %}
+        <div class="app-shell">
+            <aside class="sidebar">
+                <a class="brand" href="{% url 'core:dashboard' organization.id %}" aria-label="AuditFlow AI — Visão geral">
+                    <span class="brand-mark" aria-hidden="true">
+                        <svg viewBox="0 0 32 32" role="img">
+                            <path d="M7 7.5A3.5 3.5 0 0 1 10.5 4h11A3.5 3.5 0 0 1 25 7.5v17a3.5 3.5 0 0 1-3.5 3.5h-11A3.5 3.5 0 0 1 7 24.5z" fill="none" stroke="currentColor" stroke-width="2.4"/>
+                            <path d="m11 16 3.2 3.2L21.5 12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6"/>
+                        </svg>
+                    </span>
+                    <span>
+                        <strong>AuditFlow</strong>
+                        <small>AI</small>
+                    </span>
+                </a>
+
+                <div class="organization-card">
+                    <span class="organization-card__label">Organização ativa</span>
+                    <strong>{{ organization.name }}</strong>
+                    <span class="organization-card__meta">
+                        <span class="status-dot"></span>
+                        Ambiente operacional
+                    </span>
+                </div>
+
+                <nav class="sidebar-nav" aria-label="Navegação da organização">
+                    <span class="sidebar-nav__label">Workspace</span>
+                    <a class="sidebar-nav__link {% if request.resolver_match.namespace == 'core' %}is-active{% endif %}"
+                       href="{% url 'core:dashboard' organization.id %}"
+                       {% if request.resolver_match.namespace == 'core' %}aria-current="page"{% endif %}>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm0 7h6v-4H4v4Zm10 0h6v-9h-6v9Zm0-16v4h6V4h-6Z"/></svg>
+                        <span>Visão geral</span>
+                    </a>
+                    <a class="sidebar-nav__link {% if request.resolver_match.namespace == 'imports' %}is-active{% endif %}"
+                       href="{% url 'imports:upload' organization.id %}"
+                       {% if request.resolver_match.namespace == 'imports' %}aria-current="page"{% endif %}>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 13v6h14v-6"/></svg>
+                        <span>Importações</span>
+                    </a>
+                    <a class="sidebar-nav__link {% if request.resolver_match.namespace == 'alerts' %}is-active{% endif %}"
+                       href="{% url 'alerts:list' organization.id %}"
+                       {% if request.resolver_match.namespace == 'alerts' %}aria-current="page"{% endif %}>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5m0 3.5v.5M10.3 4.4 3.5 17a2 2 0 0 0 1.8 3h13.4a2 2 0 0 0 1.8-3L13.7 4.4a2 2 0 0 0-3.4 0Z"/></svg>
+                        <span>Alertas</span>
+                    </a>
+                    <a class="sidebar-nav__link {% if request.resolver_match.namespace == 'audit_log' %}is-active{% endif %}"
+                       href="{% url 'audit_log:list' organization.id %}"
+                       {% if request.resolver_match.namespace == 'audit_log' %}aria-current="page"{% endif %}>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5h11v15H8zM5 8H3v12h11v-2M11 9h5m-5 4h5m-5 4h3"/></svg>
+                        <span>Registo de auditoria</span>
+                    </a>
+                </nav>
+
+                <div class="sidebar-trust">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6l-7-3Zm-3 9 2 2 4-4"/></svg>
+                    <span><strong>Rastreabilidade ativa</strong>Documento de trabalho interno</span>
+                </div>
+            </aside>
+
+            <div class="app-frame">
+                <header class="topbar">
+                    <div class="topbar__context">
+                        <span class="topbar__eyebrow">AuditFlow AI</span>
+                        <span>Monitorização de controlos</span>
+                    </div>
+                    <div class="user-menu">
+                        <span class="user-avatar" aria-hidden="true">{{ user.email|slice:":1"|upper }}</span>
+                        <span class="user-menu__identity">
+                            <strong>{{ user.email }}</strong>
+                            <small>Sessão autenticada</small>
+                        </span>
+                        <form method="post" action="{% url 'logout' %}">
+                            {% csrf_token %}
+                            <button class="button button--ghost button--compact" type="submit">Sair</button>
+                        </form>
+                    </div>
+                </header>
+
+                <main id="main-content" class="app-content">
+                    {% if messages %}
+                        <div class="message-stack" aria-live="polite">
+                            {% for message in messages %}
+                                <div class="message message--{{ message.tags|default:'info' }}" role="status">
+                                    <span class="message__icon" aria-hidden="true">{% if message.tags == 'success' %}✓{% elif message.tags == 'warning' %}!{% else %}i{% endif %}</span>
+                                    <span>{{ message }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% block content %}{% endblock %}
+                </main>
+            </div>
+        </div>
+    {% else %}
+        <main id="main-content" class="auth-main">
+            {% if messages %}
+                <div class="message-stack auth-messages" aria-live="polite">
+                    {% for message in messages %}
+                        <div class="message message--{{ message.tags|default:'info' }}" role="status">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {% block auth_content %}{% block content_anonymous %}{% endblock %}{% endblock %}
+        </main>
+    {% endif %}
 </body>
 </html>

@@ -2,11 +2,44 @@
 
 {% block title %}Entrar — AuditFlow AI{% endblock %}
 
-{% block content %}
-<h1>Entrar</h1>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Entrar</button>
-</form>
+{% block auth_content %}
+<section class="auth-shell">
+    <div class="auth-story">
+        <div class="brand" aria-label="AuditFlow AI">
+            <span class="brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 32 32" role="img"><path d="M7 7.5A3.5 3.5 0 0 1 10.5 4h11A3.5 3.5 0 0 1 25 7.5v17a3.5 3.5 0 0 1-3.5 3.5h-11A3.5 3.5 0 0 1 7 24.5z" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="m11 16 3.2 3.2L21.5 12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6"/></svg>
+            </span>
+            <span><strong>AuditFlow</strong><small>AI</small></span>
+        </div>
+        <div class="auth-story__copy">
+            <span class="eyebrow" style="color: #68d7c3;">Controlo com evidência</span>
+            <h1>Transforme dados em decisões rastreáveis.</h1>
+            <p>Valide operações, identifique exceções e preserve cada revisão humana num dossier de trabalho íntegro.</p>
+        </div>
+        <div class="auth-proof"><span></span>Ambiente interno · Resultados não certificados</div>
+    </div>
+
+    <div class="auth-form-panel">
+        <span class="eyebrow">Acesso seguro</span>
+        <h2>Bem-vindo</h2>
+        <p>Introduza as suas credenciais para aceder ao espaço de trabalho.</p>
+        <form class="auth-form" method="post">
+            {% csrf_token %}
+            {% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
+            <div class="form-field">
+                <label for="{{ form.username.id_for_label }}">Email</label>
+                {{ form.username }}
+                {{ form.username.errors }}
+            </div>
+            <div class="form-field">
+                <label for="{{ form.password.id_for_label }}">Palavra-passe</label>
+                {{ form.password }}
+                {{ form.password.errors }}
+            </div>
+            {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+            <button class="button button--primary" type="submit">Entrar</button>
+        </form>
+        <p class="auth-note">O acesso e as ações efetuadas são associados à sua identidade.</p>
+    </div>
+</section>
 {% endblock %}

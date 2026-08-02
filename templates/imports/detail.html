@@ -1,143 +1,171 @@
 {% extends "base.html" %}
 
-{% block title %}Importacao — AuditFlow AI{% endblock %}
+{% block title %}{{ import_batch.original_filename }} — AuditFlow AI{% endblock %}
 
 {% block content %}
-<h1>Importacao recebida</h1>
-<dl>
-    <dt>Organizacao</dt>
-    <dd>{{ organization.name }}</dd>
-    <dt>Ficheiro</dt>
-    <dd>{{ import_batch.original_filename }}</dd>
-    <dt>Estado</dt>
-    <dd>{{ import_batch.get_status_display }}</dd>
-    <dt>Linhas recebidas</dt>
-    <dd>{{ import_batch.row_count }}</dd>
-    <dt>Linhas validas</dt>
-    <dd>{{ import_batch.valid_row_count }}</dd>
-    <dt>Linhas invalidas</dt>
-    <dd>{{ import_batch.invalid_row_count }}</dd>
-    <dt>Hash SHA-256</dt>
-    <dd><code>{{ import_batch.file_sha256 }}</code></dd>
-</dl>
+<a class="back-link" href="{% url 'core:dashboard' organization.id %}">← Voltar à visão geral</a>
+
+<header class="page-header">
+    <div class="page-header__copy">
+        <span class="eyebrow">Detalhe da importação</span>
+        <h1>{{ import_batch.original_filename }}</h1>
+        <p class="page-description">
+            Resultado da validação, regras executadas e dossiers de trabalho associados a esta importação.
+        </p>
+    </div>
+    {% if import_batch.status == "completed" and can_generate_dossier %}
+        <div class="page-actions">
+            <form method="post" action="{% url 'dossiers:download' organization.id import_batch.id %}">
+                {% csrf_token %}
+                <button class="button button--primary" type="submit">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12m0 0 4.5-4.5M12 16l-4.5-4.5M5 20h14"/></svg>
+                    Descarregar dossier de trabalho
+                </button>
+            </form>
+        </div>
+    {% endif %}
+</header>
+
+<section class="summary-strip" aria-label="Resumo da importação">
+    <div class="summary-strip__item">
+        <span class="summary-strip__label">Estado</span>
+        <span class="summary-strip__value"><span class="badge badge--{{ import_batch.status }}">{{ import_batch.get_status_display }}</span></span>
+    </div>
+    <div class="summary-strip__item">
+        <span class="summary-strip__label">Linhas recebidas</span>
+        <span class="summary-strip__value">{{ import_batch.row_count }}</span>
+    </div>
+    <div class="summary-strip__item">
+        <span class="summary-strip__label">Linhas válidas</span>
+        <span class="summary-strip__value">{{ import_batch.valid_row_count }}</span>
+    </div>
+    <div class="summary-strip__item">
+        <span class="summary-strip__label">Linhas inválidas</span>
+        <span class="summary-strip__value">{{ import_batch.invalid_row_count }}</span>
+    </div>
+</section>
 
 {% if import_batch.status == "failed" %}
-    <h2>Erros de validacao</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Linha</th>
-                <th>Campo</th>
-                <th>Erro</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for error in import_batch.error_summary %}
-                <tr>
-                    <td>{{ error.source_row|default:"—" }}</td>
-                    <td>{{ error.field|default:"—" }}</td>
-                    <td>{{ error.message }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="callout callout--danger">
+        <span class="callout__icon" aria-hidden="true">!</span>
+        <div><strong>Importação não concluída</strong><p>O ficheiro contém erros e não foi importado. Corrija os problemas apresentados antes de tentar novamente.</p></div>
+    </div>
+
+    <section class="panel section-space" aria-labelledby="validation-errors">
+        <div class="panel__header">
+            <div>
+                <h2 id="validation-errors">Erros de validação</h2>
+                <p>{{ import_batch.error_summary|length }} problema{{ import_batch.error_summary|length|pluralize }} encontrado{{ import_batch.error_summary|length|pluralize }} no contrato ou nos dados.</p>
+            </div>
+            <span class="badge badge--danger">Ação necessária</span>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr><th>Linha</th><th>Campo</th><th>Erro</th></tr></thead>
+                <tbody>
+                    {% for error in import_batch.error_summary %}
+                        <tr>
+                            <td><span class="mono">{{ error.source_row|default:"—" }}</span></td>
+                            <td><span class="mono">{{ error.field|default:"—" }}</span></td>
+                            <td>{{ error.message }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
 {% elif import_batch.status == "completed" %}
-    <p>As faturas foram validadas e guardadas.</p>
-    {% if can_generate_dossier %}
-        <form method="post" action="{% url 'dossiers:download' organization.id import_batch.id %}">
-            {% csrf_token %}
-            <button type="submit">Descarregar dossier de trabalho</button>
-        </form>
-        <p>
-            O ficheiro é um documento de trabalho interno e não certificado.
-        </p>
-    {% endif %}
-    <h2>Execucoes de regras</h2>
-    {% if rule_runs %}
-        <table>
-            <thead>
-                <tr>
-                    <th>Regra</th>
-                    <th>Versao</th>
-                    <th>Estado</th>
-                    <th>Alertas</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for rule_run in rule_runs %}
-                    <tr>
-                        <td>{{ rule_run.rule_definition.name }}</td>
-                        <td>{{ rule_run.rule_definition.version }}</td>
-                        <td>{{ rule_run.get_status_display }}</td>
-                        <td>
-                            {{ rule_run.alert_count }}
-                            {% if rule_run.alert_count %}
-                                — <a href="{% url 'alerts:list' organization.id %}">Ver alertas</a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p>Nao existem execucoes de regras para esta importacao.</p>
-    {% endif %}
+    <div class="callout callout--success">
+        <span class="callout__icon" aria-hidden="true">✓</span>
+        <div><strong>Importação concluída</strong><p>As faturas foram validadas e guardadas. As regras configuradas foram executadas sobre este lote.</p></div>
+    </div>
+
+    <section class="panel section-space" aria-labelledby="rule-runs">
+        <div class="panel__header">
+            <div>
+                <h2 id="rule-runs">Execuções de regras</h2>
+                <p>Testes determinísticos aplicados aos registos desta importação.</p>
+            </div>
+        </div>
+        {% if rule_runs %}
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead><tr><th>Regra</th><th>Versão</th><th>Estado</th><th>Alertas</th></tr></thead>
+                    <tbody>
+                        {% for rule_run in rule_runs %}
+                            <tr>
+                                <td><span class="table-primary">{{ rule_run.rule_definition.name }}</span><span class="table-secondary mono">{{ rule_run.rule_definition.key }}</span></td>
+                                <td><span class="badge">v{{ rule_run.rule_definition.version }}</span></td>
+                                <td><span class="badge badge--{{ rule_run.status }}">{{ rule_run.get_status_display }}</span></td>
+                                <td>
+                                    <strong>{{ rule_run.alert_count }}</strong>
+                                    {% if rule_run.alert_count %}
+                                        <span class="table-secondary"><a href="{% url 'alerts:list' organization.id %}">Ver alertas</a></span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state"><h3>Sem execuções</h3><p>Não existem execuções de regras para esta importação.</p></div>
+        {% endif %}
+    </section>
 {% endif %}
 
-<section id="dossier-history">
-    <h2>Dossiers gerados</h2>
-    {% if dossier_page.object_list %}
-        <p>
-            Cada linha representa um snapshot independente criado no momento
-            indicado. O hash permite comparar a integridade do respetivo payload.
-        </p>
-        <table>
-            <thead>
-                <tr>
-                    <th>Gerado em</th>
-                    <th>Utilizador</th>
-                    <th>Formato</th>
-                    <th>Contrato</th>
-                    <th>Identificador da geração</th>
-                    <th>Hash do payload</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for event in dossier_page.object_list %}
-                    <tr>
-                        <td>{{ event.created_at|date:"d/m/Y H:i:s" }}</td>
-                        <td>
-                            {% if event.actor %}
-                                {{ event.actor.email }}
-                            {% else %}
-                                Utilizador removido
-                            {% endif %}
-                        </td>
-                        <td><code>{{ event.metadata.format }}</code></td>
-                        <td><code>{{ event.metadata.contract }}</code></td>
-                        <td><code>{{ event.resource_id }}</code></td>
-                        <td><code>{{ event.metadata.payload_hash }}</code></td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-        {% if dossier_page.has_other_pages %}
-            <nav aria-label="Paginação dos dossiers gerados">
-                {% if dossier_page.has_previous %}
-                    <a href="?dossier_page={{ dossier_page.previous_page_number }}#dossier-history">Anterior</a>
-                {% endif %}
-                <span>
-                    Página {{ dossier_page.number }} de
-                    {{ dossier_page.paginator.num_pages }}
-                </span>
-                {% if dossier_page.has_next %}
-                    <a href="?dossier_page={{ dossier_page.next_page_number }}#dossier-history">Seguinte</a>
-                {% endif %}
-            </nav>
+<div class="grid-sidebar section-space">
+    <section id="dossier-history" class="panel" aria-labelledby="dossier-title">
+        <div class="panel__header">
+            <div>
+                <h2 id="dossier-title">Dossiers gerados</h2>
+                <p>Snapshots independentes, preservados com identificador e hash próprios.</p>
+            </div>
+            {% if dossier_page.object_list %}<span class="badge badge--info">{{ dossier_page.paginator.count }} snapshot{{ dossier_page.paginator.count|pluralize }}</span>{% endif %}
+        </div>
+        {% if dossier_page.object_list %}
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead><tr><th>Gerado em</th><th>Utilizador</th><th>Formato</th><th>Identificador da geração</th><th>Hash do payload</th></tr></thead>
+                    <tbody>
+                        {% for event in dossier_page.object_list %}
+                            <tr>
+                                <td>{{ event.created_at|date:"d/m/Y H:i:s" }}</td>
+                                <td>{% if event.actor %}{{ event.actor.email }}{% else %}Utilizador removido{% endif %}</td>
+                                <td><span class="badge">{{ event.metadata.format }}</span><span class="table-secondary mono">{{ event.metadata.contract }}</span></td>
+                                <td><code>{{ event.resource_id }}</code></td>
+                                <td><code>{{ event.metadata.payload_hash }}</code></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if dossier_page.has_other_pages %}
+                <nav class="pagination" aria-label="Paginação dos dossiers gerados">
+                    {% if dossier_page.has_previous %}<a href="?dossier_page={{ dossier_page.previous_page_number }}#dossier-history">Anterior</a>{% endif %}
+                    <span>Página {{ dossier_page.number }} de {{ dossier_page.paginator.num_pages }}</span>
+                    {% if dossier_page.has_next %}<a href="?dossier_page={{ dossier_page.next_page_number }}#dossier-history">Seguinte</a>{% endif %}
+                </nav>
+            {% endif %}
+        {% else %}
+            <div class="empty-state"><div class="empty-state__icon" aria-hidden="true">◇</div><h3>Sem dossiers</h3><p>Ainda não foram gerados dossiers para esta importação.</p></div>
         {% endif %}
-    {% else %}
-        <p>Ainda não foram gerados dossiers para esta importação.</p>
-    {% endif %}
-</section>
+    </section>
+
+    <aside class="panel" aria-labelledby="technical-info">
+        <div class="panel__header"><div><h2 id="technical-info">Informação técnica</h2><p>Identidade e integridade do lote.</p></div></div>
+        <div class="panel__body">
+            <dl class="detail-list" style="grid-template-columns: 1fr;">
+                <div><dt>Organização</dt><dd>{{ organization.name }}</dd></div>
+                <div><dt>Ficheiro</dt><dd>{{ import_batch.original_filename }}</dd></div>
+                <div><dt>Identificador</dt><dd><code>{{ import_batch.id }}</code></dd></div>
+                <div><dt>Hash SHA-256</dt><dd class="hash-box"><code>{{ import_batch.file_sha256 }}</code></dd></div>
+            </dl>
+            <div class="callout callout--warning" style="margin-top: 17px;">
+                <span class="callout__icon" aria-hidden="true">!</span>
+                <div><strong>Âmbito limitado</strong><p>O dossier é um documento de trabalho interno e não certificado.</p></div>
+            </div>
+        </div>
+    </aside>
+</div>
 {% endblock %}
