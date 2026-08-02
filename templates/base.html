@@ -16,6 +16,7 @@
                 <a href="{% url 'core:dashboard' organization.id %}">Visão geral</a>
                 <a href="{% url 'imports:upload' organization.id %}">Carregar faturas</a>
                 <a href="{% url 'alerts:list' organization.id %}">Alertas</a>
+                <a href="{% url 'audit_log:list' organization.id %}">Registo de auditoria</a>
             </nav>
         {% endif %}
     </header>

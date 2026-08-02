@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Registo de auditoria — AuditFlow AI{% endblock %}
+
+{% block content %}
+<h1>Registo de auditoria</h1>
+<p>Organização: {{ organization.name }}</p>
+<p>
+    Cronologia das ações registadas pelo AuditFlow AI. O registo documenta o que
+    aconteceu no sistema, mas não constitui uma conclusão profissional.
+</p>
+
+<form method="get">
+    {{ filter_form.action.label_tag }}
+    {{ filter_form.action }}
+    <button type="submit">Aplicar filtro</button>
+    {% if filters_applied or filter_form.errors %}
+        <a href="{% url 'audit_log:list' organization.id %}">Limpar filtro</a>
+    {% endif %}
+    {{ filter_form.action.errors }}
+</form>
+
+{% if entries %}
+    <p>
+        {% if page.paginator.count == 1 %}
+            1 evento encontrado.
+        {% else %}
+            {{ page.paginator.count }} eventos encontrados.
+        {% endif %}
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Ação</th>
+                <th>Utilizador</th>
+                <th>Recurso</th>
+                <th>Detalhes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+                <tr>
+                    <td>{{ entry.event.created_at|date:"d/m/Y H:i:s" }}</td>
+                    <td>
+                        {{ entry.action_label }}<br>
+                        <code>{{ entry.event.action }}</code>
+                    </td>
+                    <td>
+                        {% if entry.event.actor %}
+                            {{ entry.event.actor.email }}
+                        {% else %}
+                            Utilizador removido
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ entry.resource_label }}<br>
+                        {% if entry.event.resource_id %}
+                            <code>{{ entry.event.resource_id }}</code>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if entry.details %}
+                            <dl>
+                                {% for detail in entry.details %}
+                                    <dt>{{ detail.label }}</dt>
+                                    <dd>
+                                        {% if detail.monospace %}
+                                            <code>{{ detail.value }}</code>
+                                        {% else %}
+                                            {{ detail.value }}
+                                        {% endif %}
+                                    </dd>
+                                {% endfor %}
+                            </dl>
+                        {% else %}
+                            Sem detalhes adicionais.
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if page.has_other_pages %}
+        <nav aria-label="Paginação do registo de auditoria">
+            {% if page.has_previous %}
+                <a href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page.previous_page_number }}">Anterior</a>
+            {% endif %}
+            <span>Página {{ page.number }} de {{ page.paginator.num_pages }}</span>
+            {% if page.has_next %}
+                <a href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page.next_page_number }}">Seguinte</a>
+            {% endif %}
+        </nav>
+    {% endif %}
+{% elif filters_applied or filter_form.errors %}
+    <p>Nenhum evento corresponde ao filtro indicado.</p>
+{% else %}
+    <p>Ainda não existem eventos de auditoria nesta organização.</p>
+{% endif %}
+{% endblock %}
