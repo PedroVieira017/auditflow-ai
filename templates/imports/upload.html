@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Carregar faturas — AuditFlow AI{% endblock %}
+
+{% block content %}
+<h1>Carregar faturas</h1>
+<p>Organizacao: {{ organization.name }}</p>
+<p>Use o contrato supplier-invoices-v1: CSV UTF-8, separado por ponto e virgula.</p>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Carregar ficheiro</button>
+</form>
+{% endblock %}

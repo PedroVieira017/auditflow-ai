@@ -66,3 +66,22 @@ eventos de auditoria.
 O formato controlado para faturas de fornecedores está documentado em
 [`docs/contracts/faturas-fornecedores-v1.md`](docs/contracts/faturas-fornecedores-v1.md).
 Os exemplos verificáveis encontram-se em `examples/csv/`.
+
+## Testar o upload localmente
+
+Cria um utilizador administrativo e inicia a aplicação:
+
+```powershell
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+Em `http://127.0.0.1:8000/admin/`, cria uma organização e associa o utilizador
+através de um `Membership` com papel `owner` ou `analyst`. O formulário fica em:
+
+```text
+/organizations/<organization-id>/imports/new/
+```
+
+Os ficheiros são guardados com nomes aleatórios fora das rotas públicas. O
+nome original é apenas metadado e nunca determina o caminho de armazenamento.

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Importacao — AuditFlow AI{% endblock %}
+
+{% block content %}
+<h1>Importacao recebida</h1>
+<dl>
+    <dt>Organizacao</dt>
+    <dd>{{ organization.name }}</dd>
+    <dt>Ficheiro</dt>
+    <dd>{{ import_batch.original_filename }}</dd>
+    <dt>Estado</dt>
+    <dd>{{ import_batch.get_status_display }}</dd>
+    <dt>Hash SHA-256</dt>
+    <dd><code>{{ import_batch.file_sha256 }}</code></dd>
+</dl>
+<p>O conteudo ainda nao foi processado. Essa operacao pertence a proxima etapa.</p>
+{% endblock %}
