@@ -8,9 +8,11 @@ from django.test import Client, RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
 from apps.audit_log.models import AuditEvent
+from apps.alerts.models import Alert, AlertEvidence
 from apps.core.middleware import RequestBodySizeLimitMiddleware
 from apps.invoices.models import InvoiceRecord
 from apps.organizations.models import Membership, Organization
+from apps.rules.models import RuleRun
 
 from ..contracts import INVOICE_CSV_MAX_FILE_SIZE_BYTES
 from ..models import ImportBatch
@@ -86,6 +88,9 @@ class InvoiceCSVUploadTests(TestCase):
             (Path(self.media_directory.name) / import_batch.storage_key).is_file()
         )
         self.assertEqual(InvoiceRecord.objects.count(), 6)
+        self.assertEqual(RuleRun.objects.count(), 1)
+        self.assertEqual(Alert.objects.count(), 1)
+        self.assertEqual(AlertEvidence.objects.count(), 2)
 
         audit_event = AuditEvent.objects.get(action="import.created")
         self.assertEqual(audit_event.organization, self.organization)

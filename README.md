@@ -93,3 +93,5 @@ de auditoria.
 
 O contrato puro e versionado do motor de regras está descrito em
 [`docs/architecture/motor-de-regras.md`](docs/architecture/motor-de-regras.md).
+A primeira regra de auditoria está documentada em
+[`docs/rules/faturas-duplicadas-v1.md`](docs/rules/faturas-duplicadas-v1.md).

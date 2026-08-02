@@ -42,6 +42,31 @@
         </tbody>
     </table>
 {% elif import_batch.status == "completed" %}
-    <p>As faturas foram validadas e guardadas. Ainda nao foram executadas regras de auditoria.</p>
+    <p>As faturas foram validadas e guardadas.</p>
+    <h2>Execucoes de regras</h2>
+    {% if rule_runs %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Regra</th>
+                    <th>Versao</th>
+                    <th>Estado</th>
+                    <th>Alertas</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rule_run in rule_runs %}
+                    <tr>
+                        <td>{{ rule_run.rule_definition.name }}</td>
+                        <td>{{ rule_run.rule_definition.version }}</td>
+                        <td>{{ rule_run.get_status_display }}</td>
+                        <td>{{ rule_run.alert_count }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Nao existem execucoes de regras para esta importacao.</p>
+    {% endif %}
 {% endif %}
 {% endblock %}

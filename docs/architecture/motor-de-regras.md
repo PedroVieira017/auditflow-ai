@@ -46,9 +46,12 @@ Cada evidência referencia uma fatura que pertence ao contexto e inclui os
 factos usados na conclusão. O motor rejeita findings sem evidências, referências
 externas ao contexto, identidades repetidas e valores não serializáveis.
 
-## Fronteira desta tarefa
+## Adaptador de persistência
 
-`execute_rule()` apenas valida e devolve `EvaluatedFinding` em memória. A
-criação de `RuleRun`, `Alert` e `AlertEvidence` na base de dados será feita pelo
-adaptador de persistência da tarefa seguinte, juntamente com a primeira regra
-real de faturas duplicadas.
+`execute_rule()` continua a ser puro e devolve `EvaluatedFinding` em memória.
+O adaptador em `apps/rules/services.py` cria `RuleDefinition` e `RuleRun`, monta
+o contexto a partir de faturas validadas e persiste `Alert` e `AlertEvidence`
+numa única transação. Uma falha marca a execução como falhada e não deixa
+alertas parciais.
+
+A primeira implementação registada é `DUPLICATE_INVOICE_EXACT` v1.

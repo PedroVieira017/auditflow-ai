@@ -4,6 +4,8 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.organizations.models import Membership
+from apps.rules.duplicate_invoices import DUPLICATE_INVOICE_EXACT_RULE
+from apps.rules.services import RuleExecutionError, execute_rule_for_import
 
 from .forms import InvoiceCSVUploadForm
 from .models import ImportBatch
@@ -50,10 +52,27 @@ def upload_invoice_csv(request, organization_id):
             else:
                 process_result = process_import_batch(import_batch)
                 if process_result.is_valid:
-                    messages.success(
-                        request,
-                        "Ficheiro validado e processado com sucesso.",
-                    )
+                    try:
+                        rule_run = execute_rule_for_import(
+                            rule=DUPLICATE_INVOICE_EXACT_RULE,
+                            import_batch=import_batch,
+                        )
+                    except RuleExecutionError:
+                        messages.warning(
+                            request,
+                            (
+                                "O ficheiro foi importado, mas a regra de auditoria "
+                                "nao pode ser executada."
+                            ),
+                        )
+                    else:
+                        messages.success(
+                            request,
+                            (
+                                "Ficheiro processado com sucesso. "
+                                f"Foram gerados {rule_run.alert_count} alertas."
+                            ),
+                        )
                 else:
                     messages.warning(
                         request,
@@ -84,8 +103,13 @@ def import_detail(request, organization_id, batch_id):
         ImportBatch.objects.for_organization(membership.organization),
         id=batch_id,
     )
+    rule_runs = import_batch.rule_runs.select_related("rule_definition").all()
     return render(
         request,
         "imports/detail.html",
-        {"import_batch": import_batch, "organization": membership.organization},
+        {
+            "import_batch": import_batch,
+            "organization": membership.organization,
+            "rule_runs": rule_runs,
+        },
     )
