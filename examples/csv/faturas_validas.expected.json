@@ -1,0 +1,16 @@
+{
+  "contract_version": "supplier-invoices-v1",
+  "valid_data_rows": 6,
+  "expected_duplicate_groups": [
+    {
+      "source_rows": [2, 3],
+      "normalized_key": {
+        "fornecedor_id": "FORN-001",
+        "numero_fatura": "FT 2026/001",
+        "data_fatura": "2026-07-15",
+        "valor_total": "1234.56",
+        "moeda": "EUR"
+      }
+    }
+  ]
+}

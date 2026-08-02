@@ -1,0 +1,2 @@
+fornecedor_id;numero_fatura;data_fatura;valor_total;moeda;nome_fornecedor
+FORN-001;FT 2026/001;2026-07-15;1234,56;EUR;Fornecedor Exemplo

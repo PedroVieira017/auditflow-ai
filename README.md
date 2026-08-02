@@ -60,3 +60,9 @@ presentes na base de dados.
 O modelo inclui organizações, membros, importações, faturas normalizadas,
 definições e execuções de regras, alertas, evidências, alterações de estado e
 eventos de auditoria.
+
+## Primeiro contrato de dados
+
+O formato controlado para faturas de fornecedores está documentado em
+[`docs/contracts/faturas-fornecedores-v1.md`](docs/contracts/faturas-fornecedores-v1.md).
+Os exemplos verificáveis encontram-se em `examples/csv/`.

@@ -1,0 +1,24 @@
+{
+  "contract_version": "supplier-invoices-v1",
+  "files": {
+    "faturas_invalidas.csv": [
+      {"source_row": 2, "field": "fornecedor_id", "code": "required"},
+      {"source_row": 3, "field": "numero_fatura", "code": "required"},
+      {"source_row": 4, "field": "data_fatura", "code": "invalid_date_format"},
+      {"source_row": 5, "field": "data_fatura", "code": "invalid_date"},
+      {"source_row": 6, "field": "valor_total", "code": "thousands_separator_not_allowed"},
+      {"source_row": 7, "field": "valor_total", "code": "invalid_decimal_places"},
+      {"source_row": 8, "field": "valor_total", "code": "must_be_positive"},
+      {"source_row": 9, "field": "moeda", "code": "must_be_uppercase"},
+      {"source_row": 10, "field": "moeda", "code": "invalid_currency"},
+      {"source_row": 11, "field": "numero_fatura", "code": "unsafe_spreadsheet_prefix"},
+      {"source_row": 12, "field": null, "code": "unexpected_column_count"},
+      {"source_row": 13, "field": null, "code": "unexpected_column_count"},
+      {"source_row": 14, "field": "valor_total", "code": "amount_too_large"},
+      {"source_row": 15, "field": "moeda", "code": "unsupported_currency"}
+    ],
+    "cabecalho_invalido.csv": [
+      {"source_row": 1, "field": null, "code": "unexpected_header"}
+    ]
+  }
+}
