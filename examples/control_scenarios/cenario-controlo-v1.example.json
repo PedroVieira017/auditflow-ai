@@ -1,0 +1,119 @@
+{
+  "contract": "auditflow-control-scenario-v1",
+  "control": {
+    "description": "Rever as faturas registadas através de um teste de unicidade e investigar as exceções antes da libertação do lote de pagamento.",
+    "evidence_expectations": [
+      "Dados normalizados da fatura e do fornecedor usados no teste",
+      "Alerta com as linhas que satisfizeram os critérios da regra",
+      "Decisão humana justificada e respetiva evidência de suporte"
+    ],
+    "frequency": "per_import",
+    "name": "Revisão de potenciais faturas duplicadas",
+    "owner_role": "Responsável de contas a pagar",
+    "type": "detective"
+  },
+  "governance": {
+    "approval_note": "Critérios revistos e aceites para o processo atual de contas a pagar.",
+    "approved_at": "2026-08-15T10:30:00Z",
+    "approved_by": {
+      "email": "proprietario@example.com",
+      "role": "owner",
+      "user_id": "22222222-2222-4222-8222-222222222222"
+    },
+    "change_reason": "Configuração inicial do cenário para o processo de compras e pagamentos.",
+    "created_at": "2026-08-12T14:00:00Z",
+    "created_by": {
+      "email": "analista@example.com",
+      "role": "analyst",
+      "user_id": "33333333-3333-4333-8333-333333333333"
+    },
+    "effective_from": "2026-09-01",
+    "state": "approved",
+    "supersedes_version_id": null
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "payload_hash": "251212d08cd3042b2a47eaaa420295b9447e5f65e255b5c97e87c7259ae8735d"
+  },
+  "limitations": [
+    {
+      "code": "not_a_professional_conclusion",
+      "message": "O cenário não constitui opinião de auditoria, certificação ou garantia de conformidade."
+    },
+    {
+      "code": "configured_criteria_only",
+      "message": "Os resultados representam apenas correspondências aos critérios aprovados pela organização."
+    },
+    {
+      "code": "indicators_are_not_controls",
+      "message": "Os indicadores não substituem o desenho, a execução e a revisão do controlo."
+    },
+    {
+      "code": "human_review_required",
+      "message": "A configuração, as alterações e as conclusões exigem decisão humana registada."
+    }
+  ],
+  "monitoring": {
+    "indicators": [
+      {
+        "description": "Número de grupos de faturas que satisfazem os critérios exatos de potencial duplicação em cada importação.",
+        "direction": "lower_is_better",
+        "key": "POTENTIAL_DUPLICATE_GROUP_COUNT",
+        "measurement": {
+          "metric_key": "RULE_ALERT_COUNT",
+          "metric_version": 1,
+          "parameters": {
+            "rule_key": "DUPLICATE_INVOICE_EXACT"
+          },
+          "window": "per_import"
+        },
+        "name": "Grupos de potenciais faturas duplicadas",
+        "target": {
+          "operator": "eq",
+          "value": "0"
+        },
+        "type": "control_indicator",
+        "unit": "count"
+      }
+    ],
+    "review_due_days": 5,
+    "reviewer_role": "Responsável de contas a pagar"
+  },
+  "objective": {
+    "category": "operations",
+    "statement": "Pagar apenas obrigações válidas e evitar o pagamento repetido da mesma fatura."
+  },
+  "organization": {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "name": "Empresa Exemplo, Lda."
+  },
+  "risk": {
+    "statement": "A mesma obrigação pode ser registada ou paga mais do que uma vez."
+  },
+  "rules": [
+    {
+      "key": "DUPLICATE_INVOICE_EXACT",
+      "origin": {
+        "references": [
+          {
+            "reference": "AP-CTRL-01",
+            "title": "Procedimento interno de contas a pagar"
+          }
+        ],
+        "type": "internal"
+      },
+      "parameters": {},
+      "purpose": "Identificar grupos de faturas com fornecedor, número, data, valor e moeda iguais para investigação humana.",
+      "severity": "medium",
+      "version": 1
+    }
+  ],
+  "scenario": {
+    "description": "Monitorização das exceções ao procedimento de prevenção de pagamentos repetidos.",
+    "id": "44444444-4444-4444-8444-444444444444",
+    "key": "AP_DUPLICATE_INVOICE_REVIEW",
+    "name": "Revisão de duplicação de faturas",
+    "version": 1,
+    "version_id": "55555555-5555-4555-8555-555555555555"
+  }
+}

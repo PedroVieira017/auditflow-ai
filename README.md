@@ -110,3 +110,6 @@ O processo de decisão humana e o significado de cada estado estão documentados
 em [`docs/workflows/triagem-alertas.md`](docs/workflows/triagem-alertas.md).
 O contrato do primeiro dossier de trabalho exportável está definido em
 [`docs/contracts/dossier-trabalho-v1.md`](docs/contracts/dossier-trabalho-v1.md).
+O contrato versionado para cenários de controlo específicos de cada organização
+está definido em
+[`docs/contracts/cenario-controlo-v1.md`](docs/contracts/cenario-controlo-v1.md).
