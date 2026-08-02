@@ -98,6 +98,7 @@ def import_detail(request, organization_id, batch_id):
         request,
         "imports/detail.html",
         {
+            "can_generate_dossier": membership.role != Membership.Role.VIEWER,
             "import_batch": import_batch,
             "organization": membership.organization,
             "rule_runs": rule_runs,

@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="pt">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dossier de análise de alertas — Não certificado</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10pt;
+            line-height: 1.45;
+            --ink: #172033;
+            --muted: #536078;
+            --line: #d7dce5;
+            --panel: #f5f7fa;
+            --warning: #8a3b12;
+            --warning-bg: #fff4e8;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            color: var(--ink);
+            margin: 0 auto;
+            max-width: 1100px;
+            padding: 32px;
+        }
+
+        h1, h2, h3, h4 {
+            line-height: 1.2;
+            margin: 0 0 12px;
+        }
+
+        h1 {
+            font-size: 24pt;
+        }
+
+        h2 {
+            border-bottom: 2px solid var(--ink);
+            font-size: 16pt;
+            margin-top: 32px;
+            padding-bottom: 6px;
+        }
+
+        h3 {
+            font-size: 13pt;
+            margin-top: 24px;
+        }
+
+        h4 {
+            font-size: 11pt;
+            margin-top: 18px;
+        }
+
+        p {
+            margin: 8px 0;
+        }
+
+        .classification {
+            background: var(--warning-bg);
+            border: 2px solid var(--warning);
+            color: var(--warning);
+            display: inline-block;
+            font-size: 11pt;
+            font-weight: 700;
+            letter-spacing: .04em;
+            margin-bottom: 16px;
+            padding: 6px 10px;
+            text-transform: uppercase;
+        }
+
+        .lead {
+            color: var(--muted);
+            font-size: 12pt;
+            max-width: 75ch;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            margin: 16px 0;
+            padding: 16px;
+        }
+
+        dl {
+            display: grid;
+            gap: 7px 16px;
+            grid-template-columns: minmax(150px, 220px) 1fr;
+            margin: 0;
+        }
+
+        dt {
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        dd {
+            margin: 0;
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        table {
+            border-collapse: collapse;
+            margin: 12px 0 20px;
+            width: 100%;
+        }
+
+        th, td {
+            border: 1px solid var(--line);
+            padding: 7px 9px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            background: var(--panel);
+        }
+
+        code {
+            font-family: Consolas, "Courier New", monospace;
+            overflow-wrap: anywhere;
+        }
+
+        .summary-grid {
+            display: grid;
+            gap: 16px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .summary-number {
+            font-size: 22pt;
+            font-weight: 700;
+        }
+
+        .alert {
+            border: 1px solid var(--line);
+            border-left: 5px solid var(--ink);
+            margin: 20px 0;
+            padding: 18px;
+        }
+
+        .alert-meta {
+            color: var(--muted);
+            margin-bottom: 16px;
+        }
+
+        .limitations {
+            border: 2px solid var(--warning);
+            background: var(--warning-bg);
+            padding: 16px 20px;
+        }
+
+        .limitations li + li {
+            margin-top: 8px;
+        }
+
+        .integrity {
+            border-top: 2px solid var(--ink);
+            margin-top: 32px;
+            padding-top: 16px;
+        }
+
+        .print-footer {
+            border-top: 1px solid var(--ink);
+            color: var(--ink);
+            font-size: 8pt;
+            margin-top: 32px;
+            overflow-wrap: anywhere;
+            padding-top: 6px;
+        }
+
+        @media print {
+            @page {
+                margin: 18mm 14mm 23mm;
+                size: A4;
+            }
+
+            body {
+                max-width: none;
+                padding: 0;
+            }
+
+            .print-footer {
+                bottom: -17mm;
+                left: 0;
+                margin: 0;
+                position: fixed;
+                right: 0;
+            }
+
+            h2, h3, h4 {
+                break-after: avoid;
+            }
+
+            table, .panel, .alert, .limitations {
+                break-inside: avoid;
+            }
+
+            thead {
+                display: table-header-group;
+            }
+        }
+
+        @media (max-width: 700px) {
+            body {
+                padding: 18px;
+            }
+
+            dl, .summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            dt {
+                margin-top: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="classification">Não certificado</div>
+        <h1>Dossier de análise de alertas</h1>
+        <p class="lead">
+            Documento de trabalho interno com os resultados factuais das regras
+            executadas e as decisões humanas registadas no momento da geração.
+        </p>
+    </header>
+
+    <section aria-labelledby="document-heading">
+        <h2 id="document-heading">Identificação do documento</h2>
+        <div class="panel">
+            <dl>
+                <dt>Contrato</dt>
+                <dd><code>{{ dossier.contract }}</code></dd>
+                <dt>Identificador da geração</dt>
+                <dd><code>{{ dossier.document.generation_id }}</code></dd>
+                <dt>Gerado em</dt>
+                <dd>{{ dossier.document.generated_at }}</dd>
+                <dt>Gerado por</dt>
+                <dd>
+                    {{ dossier.document.generated_by.email }}
+                    (<code>{{ dossier.document.generated_by.user_id }}</code>)
+                </dd>
+                <dt>Classificação</dt>
+                <dd><code>{{ dossier.document.classification }}</code></dd>
+                <dt>Certificação</dt>
+                <dd><code>{{ dossier.document.certification }}</code></dd>
+            </dl>
+        </div>
+    </section>
+
+    <section aria-labelledby="scope-heading">
+        <h2 id="scope-heading">Organização e âmbito</h2>
+        <div class="panel">
+            <dl>
+                <dt>Organização</dt>
+                <dd>
+                    {{ dossier.organization.name }}
+                    (<code>{{ dossier.organization.id }}</code>)
+                </dd>
+                <dt>Tipo de âmbito</dt>
+                <dd><code>{{ dossier.scope.type }}</code></dd>
+                <dt>Importação</dt>
+                <dd><code>{{ dossier.scope.import.id }}</code></dd>
+                <dt>Ficheiro</dt>
+                <dd>{{ dossier.scope.import.original_filename }}</dd>
+                <dt>SHA-256 do ficheiro</dt>
+                <dd><code>{{ dossier.scope.import.file_sha256 }}</code></dd>
+                <dt>Estado</dt>
+                <dd><code>{{ dossier.scope.import.status }}</code></dd>
+                <dt>Concluída em</dt>
+                <dd>{{ dossier.scope.import.completed_at }}</dd>
+                <dt>Carregada por</dt>
+                <dd>
+                    {% if dossier.scope.import.uploaded_by %}
+                        {{ dossier.scope.import.uploaded_by.email }}
+                        (<code>{{ dossier.scope.import.uploaded_by.user_id }}</code>)
+                    {% else %}
+                        Utilizador removido
+                    {% endif %}
+                </dd>
+                <dt>Linhas recebidas</dt>
+                <dd>{{ dossier.scope.import.row_count }}</dd>
+                <dt>Linhas válidas</dt>
+                <dd>{{ dossier.scope.import.valid_row_count }}</dd>
+                <dt>Linhas inválidas</dt>
+                <dd>{{ dossier.scope.import.invalid_row_count }}</dd>
+            </dl>
+        </div>
+    </section>
+
+    <section aria-labelledby="summary-heading">
+        <h2 id="summary-heading">Resumo factual</h2>
+        <div class="summary-grid">
+            <div class="panel">
+                <div class="summary-number">{{ dossier.summary.rule_run_count }}</div>
+                <div>Execuções de regras</div>
+            </div>
+            <div class="panel">
+                <div class="summary-number">{{ dossier.summary.alert_count }}</div>
+                <div>Alertas</div>
+            </div>
+        </div>
+        <div class="summary-grid">
+            <div>
+                <h3>Alertas por estado</h3>
+                <table>
+                    <thead>
+                        <tr><th>Estado</th><th>Quantidade</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for status, count in dossier.summary.alerts_by_status.items %}
+                            <tr><td><code>{{ status }}</code></td><td>{{ count }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div>
+                <h3>Alertas por prioridade</h3>
+                <table>
+                    <thead>
+                        <tr><th>Prioridade</th><th>Quantidade</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for severity, count in dossier.summary.alerts_by_severity.items %}
+                            <tr><td><code>{{ severity }}</code></td><td>{{ count }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section aria-labelledby="runs-heading">
+        <h2 id="runs-heading">Execuções de regras</h2>
+        {% for run in dossier.rule_runs %}
+            <article class="panel">
+                <h3>{{ run.rule.name }}</h3>
+                <p>{{ run.rule.description }}</p>
+                <dl>
+                    <dt>Execução</dt>
+                    <dd><code>{{ run.id }}</code></dd>
+                    <dt>Regra</dt>
+                    <dd><code>{{ run.rule.key }}</code>, versão {{ run.rule.version }}</dd>
+                    <dt>Estado</dt>
+                    <dd><code>{{ run.status }}</code></dd>
+                    <dt>Início</dt>
+                    <dd>{{ run.started_at|default:"—" }}</dd>
+                    <dt>Conclusão</dt>
+                    <dd>{{ run.completed_at|default:"—" }}</dd>
+                    <dt>Alertas</dt>
+                    <dd>{{ run.alert_count }}</dd>
+                    <dt>Parâmetros</dt>
+                    <dd>
+                        {% if run.parameters %}
+                            {% for key, value in run.parameters.items %}
+                                <code>{{ key }}</code>: {{ value }}{% if not forloop.last %}; {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            Sem parâmetros
+                        {% endif %}
+                    </dd>
+                </dl>
+            </article>
+        {% empty %}
+            <p>Não existem execuções de regras associadas a esta importação.</p>
+        {% endfor %}
+    </section>
+
+    <section aria-labelledby="alerts-heading">
+        <h2 id="alerts-heading">Alertas, evidências e decisões</h2>
+        {% for alert in dossier.alerts %}
+            <article class="alert">
+                <h3>{{ alert.title }}</h3>
+                <p class="alert-meta">
+                    Prioridade <code>{{ alert.severity }}</code> ·
+                    Estado <code>{{ alert.status }}</code> ·
+                    Criado em {{ alert.created_at }}
+                </p>
+                <p>{{ alert.explanation }}</p>
+                <dl>
+                    <dt>Alerta</dt>
+                    <dd><code>{{ alert.id }}</code></dd>
+                    <dt>Fingerprint</dt>
+                    <dd><code>{{ alert.fingerprint }}</code></dd>
+                    <dt>Execução da regra</dt>
+                    <dd><code>{{ alert.rule_run_id }}</code></dd>
+                    <dt>Ação recomendada</dt>
+                    <dd>{{ alert.recommended_action|default:"—" }}</dd>
+                </dl>
+
+                <h4>Evidências</h4>
+                {% for evidence in alert.evidence %}
+                    <div class="panel">
+                        <dl>
+                            <dt>Evidência</dt>
+                            <dd><code>{{ evidence.evidence_id }}</code></dd>
+                            <dt>Registo de fatura</dt>
+                            <dd><code>{{ evidence.invoice_record_id }}</code></dd>
+                            <dt>Linha de origem</dt>
+                            <dd>{{ evidence.source_row_number }}</dd>
+                            {% for key, value in evidence.facts.items %}
+                                <dt><code>{{ key }}</code></dt>
+                                <dd>{{ value }}</dd>
+                            {% endfor %}
+                        </dl>
+                    </div>
+                {% endfor %}
+
+                <h4>Histórico de decisões</h4>
+                {% if alert.status_history %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Alteração</th>
+                                <th>Autor</th>
+                                <th>Justificação</th>
+                                <th>Evento</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for event in alert.status_history %}
+                                <tr>
+                                    <td>{{ event.changed_at }}</td>
+                                    <td>
+                                        <code>{{ event.from_status }}</code> →
+                                        <code>{{ event.to_status }}</code>
+                                    </td>
+                                    <td>
+                                        {% if event.changed_by %}
+                                            {{ event.changed_by.email }}<br>
+                                            <code>{{ event.changed_by.user_id }}</code>
+                                        {% else %}
+                                            Utilizador removido
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ event.note }}</td>
+                                    <td><code>{{ event.event_id }}</code></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>Não existem decisões humanas registadas para este alerta.</p>
+                {% endif %}
+            </article>
+        {% empty %}
+            <p>Esta importação não produziu alertas.</p>
+        {% endfor %}
+    </section>
+
+    <section aria-labelledby="limitations-heading">
+        <h2 id="limitations-heading">Limitações obrigatórias</h2>
+        <div class="limitations">
+            <ul>
+                {% for limitation in dossier.limitations %}
+                    <li>
+                        <strong><code>{{ limitation.code }}</code></strong> —
+                        {{ limitation.message }}
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </section>
+
+    <section class="integrity" aria-labelledby="integrity-heading">
+        <h2 id="integrity-heading">Integridade do payload</h2>
+        <dl>
+            <dt>Algoritmo</dt>
+            <dd><code>{{ dossier.integrity.algorithm }}</code></dd>
+            <dt>Hash do payload</dt>
+            <dd><code>{{ dossier.integrity.payload_hash }}</code></dd>
+        </dl>
+        <p>
+            Este hash permite detetar alterações ao payload. Não constitui uma
+            assinatura digital nem identifica juridicamente um signatário.
+        </p>
+    </section>
+
+    <footer class="print-footer">
+        <strong>Não certificado</strong> · SHA-256 do payload:
+        <code>{{ dossier.integrity.payload_hash }}</code>
+    </footer>
+</body>
+</html>

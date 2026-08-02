@@ -43,6 +43,15 @@
     </table>
 {% elif import_batch.status == "completed" %}
     <p>As faturas foram validadas e guardadas.</p>
+    {% if can_generate_dossier %}
+        <form method="post" action="{% url 'dossiers:download' organization.id import_batch.id %}">
+            {% csrf_token %}
+            <button type="submit">Descarregar dossier de trabalho</button>
+        </form>
+        <p>
+            O ficheiro é um documento de trabalho interno e não certificado.
+        </p>
+    {% endif %}
     <h2>Execucoes de regras</h2>
     {% if rule_runs %}
         <table>
