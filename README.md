@@ -1,6 +1,16 @@
 # AuditFlow AI
 
-Base inicial do monólito modular do AuditFlow AI.
+Plataforma em desenvolvimento para preparar, executar e documentar testes de
+controlo sobre dados financeiros. O primeiro fluxo analisa faturas de
+fornecedores através de regras determinísticas e apresenta exceções com a
+respetiva evidência.
+
+O AuditFlow AI é uma ferramenta de apoio a equipas financeiras, profissionais
+de controlo e profissionais de auditoria. Não emite certificações legais de
+contas, relatórios de auditoria ou opiniões profissionais, nem substitui o
+julgamento da gestão, do auditor ou do ROC. Os limites profissionais e o modelo
+de responsabilidade estão definidos em
+[`docs/product/limites-profissionais.md`](docs/product/limites-profissionais.md).
 
 ## Requisitos
 
@@ -45,7 +55,7 @@ e `production` exigem `DB_ENGINE=postgresql` e as restantes variáveis `DB_*`.
 - `organizations`: isolamento entre empresas;
 - `imports`: receção e validação de ficheiros;
 - `invoices`: registos normalizados;
-- `rules`: regras de auditoria versionadas;
+- `rules`: testes de controlo e regras de análise versionados;
 - `alerts`: alertas e respetiva triagem;
 - `audit_log`: registo de ações;
 - `core`: funcionalidades transversais, incluindo o health check.
@@ -88,8 +98,9 @@ nome original é apenas metadado e nunca determina o caminho de armazenamento.
 
 Após o upload, o CSV é validado de forma síncrona. As faturas só são criadas se
 todas as linhas forem válidas; qualquer erro faz falhar a importação completa e
-fica disponível na página de detalhe. Nesta fase ainda não são executadas regras
-de auditoria.
+fica disponível na página de detalhe. Numa importação válida, o sistema executa
+a regra determinística de potenciais faturas duplicadas e guarda cada alerta com
+as evidências que o originaram.
 
 O contrato puro e versionado do motor de regras está descrito em
 [`docs/architecture/motor-de-regras.md`](docs/architecture/motor-de-regras.md).
