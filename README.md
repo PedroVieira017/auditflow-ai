@@ -108,3 +108,5 @@ A primeira regra de auditoria está documentada em
 [`docs/rules/faturas-duplicadas-v1.md`](docs/rules/faturas-duplicadas-v1.md).
 O processo de decisão humana e o significado de cada estado estão documentados
 em [`docs/workflows/triagem-alertas.md`](docs/workflows/triagem-alertas.md).
+O contrato do primeiro dossier de trabalho exportável está definido em
+[`docs/contracts/dossier-trabalho-v1.md`](docs/contracts/dossier-trabalho-v1.md).
