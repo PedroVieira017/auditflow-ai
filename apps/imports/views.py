@@ -1,8 +1,10 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 
+from apps.audit_log.models import AuditEvent
 from apps.organizations.access import get_active_membership
 from apps.organizations.models import Membership
 from apps.rules.duplicate_invoices import DUPLICATE_INVOICE_EXACT_RULE
@@ -94,11 +96,24 @@ def import_detail(request, organization_id, batch_id):
         id=batch_id,
     )
     rule_runs = import_batch.rule_runs.select_related("rule_definition").all()
+    dossier_events = (
+        AuditEvent.objects.for_organization(membership.organization)
+        .filter(
+            action="dossier.generated",
+            resource_type="work_dossier",
+            metadata__import_batch_id=str(import_batch.id),
+        )
+        .select_related("actor")
+    )
+    dossier_page = Paginator(dossier_events, 20).get_page(
+        request.GET.get("dossier_page")
+    )
     return render(
         request,
         "imports/detail.html",
         {
             "can_generate_dossier": membership.role != Membership.Role.VIEWER,
+            "dossier_page": dossier_page,
             "import_batch": import_batch,
             "organization": membership.organization,
             "rule_runs": rule_runs,

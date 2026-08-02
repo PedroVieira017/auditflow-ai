@@ -83,4 +83,61 @@
         <p>Nao existem execucoes de regras para esta importacao.</p>
     {% endif %}
 {% endif %}
+
+<section id="dossier-history">
+    <h2>Dossiers gerados</h2>
+    {% if dossier_page.object_list %}
+        <p>
+            Cada linha representa um snapshot independente criado no momento
+            indicado. O hash permite comparar a integridade do respetivo payload.
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Gerado em</th>
+                    <th>Utilizador</th>
+                    <th>Formato</th>
+                    <th>Contrato</th>
+                    <th>Identificador da geração</th>
+                    <th>Hash do payload</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in dossier_page.object_list %}
+                    <tr>
+                        <td>{{ event.created_at|date:"d/m/Y H:i:s" }}</td>
+                        <td>
+                            {% if event.actor %}
+                                {{ event.actor.email }}
+                            {% else %}
+                                Utilizador removido
+                            {% endif %}
+                        </td>
+                        <td><code>{{ event.metadata.format }}</code></td>
+                        <td><code>{{ event.metadata.contract }}</code></td>
+                        <td><code>{{ event.resource_id }}</code></td>
+                        <td><code>{{ event.metadata.payload_hash }}</code></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if dossier_page.has_other_pages %}
+            <nav aria-label="Paginação dos dossiers gerados">
+                {% if dossier_page.has_previous %}
+                    <a href="?dossier_page={{ dossier_page.previous_page_number }}#dossier-history">Anterior</a>
+                {% endif %}
+                <span>
+                    Página {{ dossier_page.number }} de
+                    {{ dossier_page.paginator.num_pages }}
+                </span>
+                {% if dossier_page.has_next %}
+                    <a href="?dossier_page={{ dossier_page.next_page_number }}#dossier-history">Seguinte</a>
+                {% endif %}
+            </nav>
+        {% endif %}
+    {% else %}
+        <p>Ainda não foram gerados dossiers para esta importação.</p>
+    {% endif %}
+</section>
 {% endblock %}

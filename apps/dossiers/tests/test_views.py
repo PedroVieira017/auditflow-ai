@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -55,6 +55,34 @@ class WorkDossierDownloadTests(TestCase):
             kwargs={
                 "organization_id": self.organization.id,
                 "batch_id": self.import_batch.id,
+            },
+        )
+
+    def create_dossier_event(
+        self,
+        *,
+        actor=None,
+        generation_id=None,
+        import_batch=None,
+        organization=None,
+        payload_hash=None,
+    ):
+        generation_id = generation_id or uuid4()
+        import_batch = import_batch or self.import_batch
+        organization = organization or import_batch.organization
+        payload_hash = payload_hash or generation_id.hex * 2
+        return AuditEvent.objects.create(
+            organization=organization,
+            actor=actor or self.user,
+            action="dossier.generated",
+            resource_type="work_dossier",
+            resource_id=generation_id,
+            metadata={
+                "contract": "auditflow-work-dossier-v1",
+                "format": "html",
+                "generation_id": str(generation_id),
+                "import_batch_id": str(import_batch.id),
+                "payload_hash": payload_hash,
             },
         )
 
@@ -262,7 +290,115 @@ class WorkDossierDownloadTests(TestCase):
         self.assertContains(response, self.download_url)
         self.assertContains(response, "csrfmiddlewaretoken")
 
+    def test_import_detail_shows_empty_dossier_history(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.import_detail_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Dossiers gerados")
+        self.assertContains(
+            response,
+            "Ainda não foram gerados dossiers para esta importação.",
+        )
+
+    def test_generated_dossier_appears_in_import_history(self):
+        generation_id = UUID("99999999-9999-4999-8999-999999999999")
+        self.client.force_login(self.user)
+        with patch(
+            "apps.dossiers.services.uuid.uuid4",
+            return_value=generation_id,
+        ):
+            download_response = self.client.post(self.download_url)
+
+        event = AuditEvent.objects.get(action="dossier.generated")
+        response = self.client.get(self.import_detail_url)
+
+        self.assertEqual(download_response.status_code, 200)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.user.email)
+        self.assertContains(response, str(generation_id))
+        self.assertContains(response, "auditflow-work-dossier-v1")
+        self.assertContains(response, "html")
+        self.assertContains(response, event.metadata["payload_hash"])
+
+    def test_dossier_history_is_isolated_by_import_and_organization(self):
+        other_batch = ImportBatch.objects.create(
+            organization=self.organization,
+            uploaded_by=self.user,
+            original_filename="outra-importacao.csv",
+            file_sha256="b" * 64,
+            status=ImportBatch.Status.COMPLETED,
+            completed_at=datetime(2026, 8, 2, 10, 0, tzinfo=timezone.utc),
+        )
+        other_organization = Organization.objects.create(
+            name="Empresa Confidencial",
+            slug="empresa-confidencial-dossier",
+        )
+        visible_event = self.create_dossier_event(payload_hash="a" * 64)
+        hidden_import_event = self.create_dossier_event(
+            import_batch=other_batch,
+            payload_hash="b" * 64,
+        )
+        hidden_organization_event = self.create_dossier_event(
+            organization=other_organization,
+            payload_hash="c" * 64,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.import_detail_url)
+
+        self.assertContains(response, visible_event.metadata["payload_hash"])
+        self.assertNotContains(
+            response,
+            hidden_import_event.metadata["payload_hash"],
+        )
+        self.assertNotContains(
+            response,
+            hidden_organization_event.metadata["payload_hash"],
+        )
+        self.assertEqual(response.context["dossier_page"].paginator.count, 1)
+
+    def test_dossier_history_is_paginated_at_twenty_events(self):
+        for _ in range(21):
+            self.create_dossier_event()
+        self.client.force_login(self.user)
+
+        first_page = self.client.get(self.import_detail_url)
+        second_page = self.client.get(
+            self.import_detail_url,
+            {"dossier_page": 2},
+        )
+
+        self.assertEqual(first_page.context["dossier_page"].paginator.count, 21)
+        self.assertEqual(
+            len(first_page.context["dossier_page"].object_list),
+            20,
+        )
+        self.assertEqual(
+            len(second_page.context["dossier_page"].object_list),
+            1,
+        )
+        self.assertContains(
+            first_page,
+            "?dossier_page=2#dossier-history",
+        )
+
+    def test_dossier_history_handles_a_removed_actor(self):
+        removed_actor = get_user_model().objects.create_user(
+            email="autor-removido@example.com",
+            password="password",
+        )
+        self.create_dossier_event(actor=removed_actor)
+        removed_actor.delete()
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.import_detail_url)
+
+        self.assertContains(response, "Utilizador removido")
+
     def test_import_detail_hides_download_action_from_viewer(self):
+        event = self.create_dossier_event()
         self.membership.role = Membership.Role.VIEWER
         self.membership.save()
         self.client.force_login(self.user)
@@ -272,6 +408,7 @@ class WorkDossierDownloadTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "Descarregar dossier de trabalho")
         self.assertNotContains(response, self.download_url)
+        self.assertContains(response, event.metadata["payload_hash"])
 
 
 class WorkDossierTemplateTests(SimpleTestCase):
