@@ -60,7 +60,12 @@
                         <td>{{ rule_run.rule_definition.name }}</td>
                         <td>{{ rule_run.rule_definition.version }}</td>
                         <td>{{ rule_run.get_status_display }}</td>
-                        <td>{{ rule_run.alert_count }}</td>
+                        <td>
+                            {{ rule_run.alert_count }}
+                            {% if rule_run.alert_count %}
+                                — <a href="{% url 'alerts:list' organization.id %}">Ver alertas</a>
+                            {% endif %}
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>

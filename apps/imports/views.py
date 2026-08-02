@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 
+from apps.organizations.access import get_active_membership
 from apps.organizations.models import Membership
 from apps.rules.duplicate_invoices import DUPLICATE_INVOICE_EXACT_RULE
 from apps.rules.services import RuleExecutionError, execute_rule_for_import
@@ -11,17 +12,6 @@ from .forms import InvoiceCSVUploadForm
 from .models import ImportBatch
 from .processing import process_import_batch
 from .services import DuplicateImportError, create_import_batch
-
-
-def get_active_membership(*, user, organization_id):
-    return get_object_or_404(
-        Membership.objects.select_related("organization"),
-        organization_id=organization_id,
-        organization__is_active=True,
-        user=user,
-        is_active=True,
-    )
-
 
 @login_required
 def upload_invoice_csv(request, organization_id):

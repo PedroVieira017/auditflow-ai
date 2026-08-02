@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Alertas — AuditFlow AI{% endblock %}
+
+{% block content %}
+<h1>Alertas</h1>
+<p>Organização: {{ organization.name }}</p>
+
+{% if page.object_list %}
+    <p>{{ page.paginator.count }} alerta{{ page.paginator.count|pluralize }} encontrado{{ page.paginator.count|pluralize }}.</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Prioridade</th>
+                <th>Alerta</th>
+                <th>Estado</th>
+                <th>Teste</th>
+                <th>Importação</th>
+                <th>Criado em</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for alert in page.object_list %}
+                <tr>
+                    <td>{{ alert.get_severity_display }}</td>
+                    <td>
+                        <a href="{% url 'alerts:detail' organization.id alert.id %}">
+                            {{ alert.title }}
+                        </a>
+                    </td>
+                    <td>{{ alert.get_status_display }}</td>
+                    <td>
+                        {{ alert.rule_run.rule_definition.name }}
+                        v{{ alert.rule_run.rule_definition.version }}
+                    </td>
+                    <td>{{ alert.rule_run.import_batch.original_filename }}</td>
+                    <td>{{ alert.created_at|date:"d/m/Y H:i" }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if page.has_other_pages %}
+        <nav aria-label="Paginação dos alertas">
+            {% if page.has_previous %}
+                <a href="?page={{ page.previous_page_number }}">Anterior</a>
+            {% endif %}
+            <span>Página {{ page.number }} de {{ page.paginator.num_pages }}</span>
+            {% if page.has_next %}
+                <a href="?page={{ page.next_page_number }}">Seguinte</a>
+            {% endif %}
+        </nav>
+    {% endif %}
+{% else %}
+    <p>Ainda não existem alertas nesta organização.</p>
+{% endif %}
+{% endblock %}

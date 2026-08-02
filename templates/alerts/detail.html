@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}{{ alert.title }} — AuditFlow AI{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'alerts:list' organization.id %}">← Voltar aos alertas</a></p>
+
+<h1>{{ alert.title }}</h1>
+<dl>
+    <dt>Organização</dt>
+    <dd>{{ organization.name }}</dd>
+    <dt>Prioridade</dt>
+    <dd>{{ alert.get_severity_display }}</dd>
+    <dt>Estado</dt>
+    <dd>{{ alert.get_status_display }}</dd>
+    <dt>Teste executado</dt>
+    <dd>
+        {{ alert.rule_run.rule_definition.name }}
+        ({{ alert.rule_run.rule_definition.key }}
+        v{{ alert.rule_run.rule_definition.version }})
+    </dd>
+    <dt>Importação</dt>
+    <dd>
+        <a href="{% url 'imports:detail' organization.id alert.rule_run.import_batch.id %}">
+            {{ alert.rule_run.import_batch.original_filename }}
+        </a>
+    </dd>
+    <dt>Identificador rastreável</dt>
+    <dd><code>{{ alert.fingerprint }}</code></dd>
+</dl>
+
+<h2>O que foi encontrado</h2>
+<p>{{ alert.explanation }}</p>
+
+{% if alert.recommended_action %}
+    <h2>Ação recomendada</h2>
+    <p>{{ alert.recommended_action }}</p>
+{% endif %}
+
+<h2>Evidências</h2>
+{% if alert.evidence.all %}
+    <table>
+        <thead>
+            <tr>
+                <th>Linha do ficheiro</th>
+                <th>Fornecedor</th>
+                <th>Número da fatura</th>
+                <th>Data</th>
+                <th>Valor</th>
+                <th>Factos usados</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for evidence in alert.evidence.all %}
+                <tr>
+                    <td>{{ evidence.invoice_record.source_row_number }}</td>
+                    <td>
+                        {% if evidence.invoice_record.supplier_name %}
+                            {{ evidence.invoice_record.supplier_name }}<br>
+                        {% endif %}
+                        <code>{{ evidence.invoice_record.supplier_identifier }}</code>
+                    </td>
+                    <td>{{ evidence.invoice_record.invoice_number }}</td>
+                    <td>{{ evidence.invoice_record.invoice_date|date:"d/m/Y" }}</td>
+                    <td>
+                        {{ evidence.invoice_record.gross_amount }}
+                        {{ evidence.invoice_record.currency }}
+                    </td>
+                    <td>
+                        <dl>
+                            {% for name, value in evidence.facts.items %}
+                                <dt>{{ name }}</dt>
+                                <dd>{{ value }}</dd>
+                            {% endfor %}
+                        </dl>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>Este alerta não possui evidências associadas.</p>
+{% endif %}
+
+<p>Este resultado assinala uma exceção aos critérios do teste. Não confirma, por si só, fraude, erro material ou deficiência de controlo.</p>
+{% endblock %}

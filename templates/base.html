@@ -11,6 +11,12 @@
         {% if user.is_authenticated %}
             <span>{{ user.email }}</span>
         {% endif %}
+        {% if organization %}
+            <nav aria-label="Navegação da organização">
+                <a href="{% url 'imports:upload' organization.id %}">Carregar faturas</a>
+                <a href="{% url 'alerts:list' organization.id %}">Alertas</a>
+            </nav>
+        {% endif %}
     </header>
     <main>
         {% for message in messages %}
