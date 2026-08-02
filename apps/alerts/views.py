@@ -1,11 +1,16 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import Prefetch
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.organizations.access import get_active_membership
+from apps.organizations.models import Membership
 
-from .models import Alert, AlertEvidence
+from .forms import AlertStatusForm
+from .models import Alert, AlertEvidence, AlertStatusEvent
+from .services import AlertStatusChangeError, change_alert_status
 
 
 @login_required
@@ -42,6 +47,9 @@ def alert_detail(request, organization_id, alert_id):
     evidence_queryset = AlertEvidence.objects.for_organization(
         membership.organization
     ).select_related("invoice_record")
+    status_event_queryset = AlertStatusEvent.objects.for_organization(
+        membership.organization
+    ).select_related("changed_by")
     alert = get_object_or_404(
         Alert.objects.for_organization(membership.organization)
         .select_related(
@@ -50,14 +58,48 @@ def alert_detail(request, organization_id, alert_id):
         )
         .prefetch_related(
             Prefetch("evidence", queryset=evidence_queryset),
+            Prefetch("status_events", queryset=status_event_queryset),
         ),
         id=alert_id,
     )
+    can_triage = membership.role != Membership.Role.VIEWER
+    status_form = None
+    if request.method == "POST":
+        if not can_triage:
+            raise PermissionDenied("Este utilizador não pode alterar alertas.")
+        status_form = AlertStatusForm(
+            request.POST,
+            current_status=alert.status,
+        )
+        if status_form.is_valid():
+            try:
+                change_alert_status(
+                    alert=alert,
+                    organization=membership.organization,
+                    changed_by=request.user,
+                    to_status=status_form.cleaned_data["status"],
+                    note=status_form.cleaned_data["note"],
+                    expected_status=status_form.cleaned_data["expected_status"],
+                )
+            except AlertStatusChangeError as exc:
+                status_form.add_error(None, str(exc))
+            else:
+                messages.success(request, "O estado do alerta foi atualizado.")
+                return redirect(
+                    "alerts:detail",
+                    organization_id=membership.organization_id,
+                    alert_id=alert.id,
+                )
+    elif can_triage:
+        status_form = AlertStatusForm(current_status=alert.status)
+
     return render(
         request,
         "alerts/detail.html",
         {
             "alert": alert,
+            "can_triage": can_triage,
             "organization": membership.organization,
+            "status_form": status_form,
         },
     )

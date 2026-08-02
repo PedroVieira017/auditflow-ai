@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import F, Q
 
 from apps.core.choices import Severity
 from apps.core.models import OrganizationScopedModel
@@ -108,19 +109,29 @@ class AlertStatusEvent(OrganizationScopedModel):
     )
     from_status = models.CharField(max_length=20, choices=Alert.Status.choices)
     to_status = models.CharField(max_length=20, choices=Alert.Status.choices)
-    note = models.TextField(blank=True)
+    note = models.TextField(max_length=2_000)
 
     class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=~Q(from_status=F("to_status")),
+                name="alert_status_event_changes_status",
+            )
+        ]
         ordering = ("created_at",)
 
     def clean(self):
         super().clean()
+        errors = {}
         if (
             self.organization_id
             and self.alert_id
             and self.alert.organization_id != self.organization_id
         ):
-            raise ValidationError(
-                {"alert": "O alerta pertence a outra organizacao."}
-            )
-
+            errors["alert"] = "O alerta pertence a outra organizacao."
+        if self.from_status == self.to_status:
+            errors["to_status"] = "O novo estado deve ser diferente do atual."
+        if not (self.note or "").strip():
+            errors["note"] = "A justificação da alteração é obrigatória."
+        if errors:
+            raise ValidationError(errors)

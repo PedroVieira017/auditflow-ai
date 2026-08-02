@@ -5,13 +5,14 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
+from apps.audit_log.models import AuditEvent
 from apps.core.choices import Severity
 from apps.imports.models import ImportBatch
 from apps.invoices.models import InvoiceRecord
 from apps.organizations.models import Membership, Organization
 from apps.rules.models import RuleDefinition, RuleRun
 
-from ..models import Alert, AlertEvidence
+from ..models import Alert, AlertEvidence, AlertStatusEvent
 
 
 class AlertViewsTests(TestCase):
@@ -259,6 +260,136 @@ class AlertViewsTests(TestCase):
         self.assertContains(response, "FT 2026/100", count=4)
         self.assertContains(response, "1230,00", count=2)
         self.assertContains(response, "Não confirma, por si só, fraude")
+
+    def test_viewer_sees_history_but_not_decision_form(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.detail_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "permite consultar, mas não alterar")
+        self.assertNotContains(response, "Registar decisão")
+
+    def test_analyst_sees_decision_form(self):
+        self.membership.role = Membership.Role.ANALYST
+        self.membership.save()
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.detail_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Registar decisão")
+        self.assertContains(response, 'name="expected_status"', html=False)
+
+    def test_viewer_cannot_submit_decision(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            self.detail_url,
+            {
+                "status": Alert.Status.VALID,
+                "note": "Tentei alterar o alerta.",
+                "expected_status": Alert.Status.NEW,
+            },
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.alert.refresh_from_db()
+        self.assertEqual(self.alert.status, Alert.Status.NEW)
+        self.assertFalse(AlertStatusEvent.objects.exists())
+        self.assertFalse(AuditEvent.objects.exists())
+
+    def test_analyst_can_register_and_view_decision(self):
+        self.membership.role = Membership.Role.ANALYST
+        self.membership.save()
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            self.detail_url,
+            {
+                "status": Alert.Status.VALID,
+                "note": "A exceção foi confirmada nos documentos de origem.",
+                "expected_status": Alert.Status.NEW,
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "O estado do alerta foi atualizado.")
+        self.assertContains(response, "Novo → Valido")
+        self.assertContains(
+            response,
+            "A exceção foi confirmada nos documentos de origem.",
+        )
+        self.assertContains(response, self.user.email)
+        self.alert.refresh_from_db()
+        self.assertEqual(self.alert.status, Alert.Status.VALID)
+        self.assertEqual(AlertStatusEvent.objects.count(), 1)
+        self.assertTrue(AuditEvent.objects.filter(action="alert.status_changed").exists())
+
+    def test_blank_decision_note_is_rejected(self):
+        self.membership.role = Membership.Role.OWNER
+        self.membership.save()
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            self.detail_url,
+            {
+                "status": Alert.Status.FALSE_POSITIVE,
+                "note": "   ",
+                "expected_status": Alert.Status.NEW,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["status_form"].errors["note"])
+        self.alert.refresh_from_db()
+        self.assertEqual(self.alert.status, Alert.Status.NEW)
+        self.assertFalse(AlertStatusEvent.objects.exists())
+
+    def test_stale_decision_does_not_overwrite_current_status(self):
+        self.membership.role = Membership.Role.ANALYST
+        self.membership.save()
+        self.alert.status = Alert.Status.VALID
+        self.alert.save()
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            self.detail_url,
+            {
+                "status": Alert.Status.RESOLVED,
+                "note": "Decisão baseada numa página antiga.",
+                "expected_status": Alert.Status.NEW,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "O estado foi alterado por outra pessoa")
+        self.alert.refresh_from_db()
+        self.assertEqual(self.alert.status, Alert.Status.VALID)
+        self.assertFalse(AlertStatusEvent.objects.exists())
+
+    def test_decision_note_is_escaped_in_history(self):
+        self.membership.role = Membership.Role.ANALYST
+        self.membership.save()
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            self.detail_url,
+            {
+                "status": Alert.Status.FALSE_POSITIVE,
+                "note": "<script>alert('decision')</script>",
+                "expected_status": Alert.Status.NEW,
+            },
+            follow=True,
+        )
+
+        self.assertNotContains(response, "<script>alert('decision')</script>")
+        self.assertContains(
+            response,
+            "&lt;script&gt;alert(&#x27;decision&#x27;)&lt;/script&gt;",
+            html=False,
+        )
 
     def test_detail_escapes_values_from_imported_data(self):
         self.first_invoice.supplier_name = "<script>alert('x')</script>"

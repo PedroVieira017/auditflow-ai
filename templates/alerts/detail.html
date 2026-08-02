@@ -37,6 +37,40 @@
     <p>{{ alert.recommended_action }}</p>
 {% endif %}
 
+<h2>Decisão humana</h2>
+{% if can_triage %}
+    <form method="post">
+        {% csrf_token %}
+        {{ status_form.as_p }}
+        <button type="submit">Registar decisão</button>
+    </form>
+{% else %}
+    <p>O seu perfil permite consultar, mas não alterar, este alerta.</p>
+{% endif %}
+
+<h3>Histórico de decisões</h3>
+{% if alert.status_events.all %}
+    <ol>
+        {% for event in alert.status_events.all %}
+            <li>
+                <p>
+                    <strong>{{ event.get_from_status_display }} → {{ event.get_to_status_display }}</strong>
+                    em {{ event.created_at|date:"d/m/Y H:i" }}
+                    por
+                    {% if event.changed_by %}
+                        {{ event.changed_by.email }}
+                    {% else %}
+                        utilizador removido
+                    {% endif %}
+                </p>
+                <p>{{ event.note }}</p>
+            </li>
+        {% endfor %}
+    </ol>
+{% else %}
+    <p>Ainda não foram registadas decisões humanas.</p>
+{% endif %}
+
 <h2>Evidências</h2>
 {% if alert.evidence.all %}
     <table>

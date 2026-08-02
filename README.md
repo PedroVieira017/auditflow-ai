@@ -106,3 +106,5 @@ O contrato puro e versionado do motor de regras está descrito em
 [`docs/architecture/motor-de-regras.md`](docs/architecture/motor-de-regras.md).
 A primeira regra de auditoria está documentada em
 [`docs/rules/faturas-duplicadas-v1.md`](docs/rules/faturas-duplicadas-v1.md).
+O processo de decisão humana e o significado de cada estado estão documentados
+em [`docs/workflows/triagem-alertas.md`](docs/workflows/triagem-alertas.md).
