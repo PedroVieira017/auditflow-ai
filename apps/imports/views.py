@@ -7,6 +7,7 @@ from apps.organizations.models import Membership
 
 from .forms import InvoiceCSVUploadForm
 from .models import ImportBatch
+from .processing import process_import_batch
 from .services import DuplicateImportError, create_import_batch
 
 
@@ -47,7 +48,17 @@ def upload_invoice_csv(request, organization_id):
                     ),
                 )
             else:
-                messages.success(request, "Ficheiro recebido com sucesso.")
+                process_result = process_import_batch(import_batch)
+                if process_result.is_valid:
+                    messages.success(
+                        request,
+                        "Ficheiro validado e processado com sucesso.",
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        "O ficheiro contem erros e nao foi importado.",
+                    )
                 return redirect(
                     "imports:detail",
                     organization_id=membership.organization_id,

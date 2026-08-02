@@ -76,7 +76,7 @@ class InvoiceCSVUploadTests(TestCase):
         self.assertEqual(import_batch.organization, self.organization)
         self.assertEqual(import_batch.uploaded_by, self.user)
         self.assertEqual(import_batch.original_filename, "faturas.csv")
-        self.assertEqual(import_batch.status, ImportBatch.Status.PENDING)
+        self.assertEqual(import_batch.status, ImportBatch.Status.COMPLETED)
         self.assertRegex(
             import_batch.storage_key,
             rf"^organizations/{self.organization.id}/imports/[0-9a-f]{{32}}\.csv$",
@@ -85,7 +85,7 @@ class InvoiceCSVUploadTests(TestCase):
         self.assertTrue(
             (Path(self.media_directory.name) / import_batch.storage_key).is_file()
         )
-        self.assertEqual(InvoiceRecord.objects.count(), 0)
+        self.assertEqual(InvoiceRecord.objects.count(), 6)
 
         audit_event = AuditEvent.objects.get(action="import.created")
         self.assertEqual(audit_event.organization, self.organization)
@@ -95,6 +95,7 @@ class InvoiceCSVUploadTests(TestCase):
             audit_event.metadata["size_bytes"],
             len(self.valid_csv),
         )
+        self.assertTrue(AuditEvent.objects.filter(action="import.processed").exists())
 
     def test_unauthenticated_user_is_redirected_to_login(self):
         response = self.client.get(self.upload_url)

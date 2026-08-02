@@ -11,8 +11,37 @@
     <dd>{{ import_batch.original_filename }}</dd>
     <dt>Estado</dt>
     <dd>{{ import_batch.get_status_display }}</dd>
+    <dt>Linhas recebidas</dt>
+    <dd>{{ import_batch.row_count }}</dd>
+    <dt>Linhas validas</dt>
+    <dd>{{ import_batch.valid_row_count }}</dd>
+    <dt>Linhas invalidas</dt>
+    <dd>{{ import_batch.invalid_row_count }}</dd>
     <dt>Hash SHA-256</dt>
     <dd><code>{{ import_batch.file_sha256 }}</code></dd>
 </dl>
-<p>O conteudo ainda nao foi processado. Essa operacao pertence a proxima etapa.</p>
+
+{% if import_batch.status == "failed" %}
+    <h2>Erros de validacao</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Linha</th>
+                <th>Campo</th>
+                <th>Erro</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for error in import_batch.error_summary %}
+                <tr>
+                    <td>{{ error.source_row|default:"—" }}</td>
+                    <td>{{ error.field|default:"—" }}</td>
+                    <td>{{ error.message }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% elif import_batch.status == "completed" %}
+    <p>As faturas foram validadas e guardadas. Ainda nao foram executadas regras de auditoria.</p>
+{% endif %}
 {% endblock %}

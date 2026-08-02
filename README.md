@@ -85,3 +85,8 @@ através de um `Membership` com papel `owner` ou `analyst`. O formulário fica e
 
 Os ficheiros são guardados com nomes aleatórios fora das rotas públicas. O
 nome original é apenas metadado e nunca determina o caminho de armazenamento.
+
+Após o upload, o CSV é validado de forma síncrona. As faturas só são criadas se
+todas as linhas forem válidas; qualquer erro faz falhar a importação completa e
+fica disponível na página de detalhe. Nesta fase ainda não são executadas regras
+de auditoria.

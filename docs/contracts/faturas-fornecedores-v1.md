@@ -14,6 +14,7 @@ Identificador do contrato: `supplier-invoices-v1`.
 - codificação: UTF-8, com ou sem BOM;
 - separador: ponto e vírgula (`;`);
 - primeira linha: cabeçalho obrigatório;
+- pelo menos uma linha de dados;
 - máximo: 10 MiB e 50 000 linhas de dados;
 - finais de linha: LF ou CRLF;
 - linhas vazias no meio dos dados não são aceites;
@@ -49,6 +50,10 @@ A importação é atómica: se uma linha for inválida, nenhuma fatura desse
 ficheiro é persistida. O resultado deve indicar a linha, o campo e um código de
 erro estável. A primeira linha de dados é a linha 2, porque a linha 1 contém o
 cabeçalho.
+
+Todas as linhas são validadas antes de qualquer fatura ser persistida. A base
+de dados conserva no máximo os primeiros 100 erros do ficheiro, embora as
+contagens de linhas válidas e inválidas considerem o ficheiro completo.
 
 O nome original do ficheiro é apenas informativo. O sistema calculará um hash
 SHA-256 e não aceitará duas importações idênticas na mesma organização.
