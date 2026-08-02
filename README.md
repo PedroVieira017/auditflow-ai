@@ -58,6 +58,8 @@ e `production` exigem `DB_ENGINE=postgresql` e as restantes variáveis `DB_*`.
 - `rules`: testes de controlo e regras de análise versionados;
 - `alerts`: alertas e respetiva triagem;
 - `audit_log`: registo de ações;
+- `control_scenarios`: configuração versionada de objetivos, riscos, controlos,
+  indicadores e regras por organização;
 - `core`: funcionalidades transversais, incluindo o health check.
 
 ## Modelo inicial

@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "apps.alerts.apps.AlertsConfig",
     "apps.audit_log.apps.AuditLogConfig",
     "apps.dossiers.apps.DossiersConfig",
+    "apps.control_scenarios.apps.ControlScenariosConfig",
 ]
 
 MIDDLEWARE = [
