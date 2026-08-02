@@ -90,3 +90,6 @@ Após o upload, o CSV é validado de forma síncrona. As faturas só são criada
 todas as linhas forem válidas; qualquer erro faz falhar a importação completa e
 fica disponível na página de detalhe. Nesta fase ainda não são executadas regras
 de auditoria.
+
+O contrato puro e versionado do motor de regras está descrito em
+[`docs/architecture/motor-de-regras.md`](docs/architecture/motor-de-regras.md).
