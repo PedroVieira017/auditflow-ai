@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Criar cenário de controlo — AuditFlow AI{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'control_scenarios:list' organization.id %}">← Voltar aos cenários</a>
+
+<header class="page-header">
+    <div class="page-header__copy">
+        <span class="eyebrow">Novo rascunho</span>
+        <h1>Criar cenário de controlo</h1>
+        <p class="page-description">
+            Configure o primeiro cenário da {{ organization.name }} com base na regra
+            determinística de potenciais faturas duplicadas.
+        </p>
+    </div>
+</header>
+
+<div class="callout callout--warning">
+    <span class="callout__icon" aria-hidden="true">!</span>
+    <div><strong>O cenário será guardado como rascunho</strong><p>Não será executado nem considerado aprovado. A aprovação e a ativação serão ações humanas separadas e auditadas.</p></div>
+</div>
+
+<form method="post" class="scenario-form section-space">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <section class="panel form-section" aria-labelledby="identity-section">
+        <div class="panel__header"><div><span class="form-section__step">01</span><h2 id="identity-section">Identidade e motivo</h2><p>Informação estável que identifica o cenário ao longo do tempo.</p></div></div>
+        <div class="panel__body form-grid form-grid--2">
+            <div class="form-field">{{ form.key.label_tag }}{{ form.key }}{{ form.key.errors }}<span class="helptext">{{ form.key.help_text }}</span></div>
+            <div class="form-field">{{ form.name.label_tag }}{{ form.name }}{{ form.name.errors }}</div>
+            <div class="form-field">{{ form.description.label_tag }}{{ form.description }}{{ form.description.errors }}</div>
+            <div class="form-field">{{ form.change_reason.label_tag }}{{ form.change_reason }}{{ form.change_reason.errors }}<span class="helptext">{{ form.change_reason.help_text }}</span></div>
+        </div>
+    </section>
+
+    <section class="panel form-section" aria-labelledby="objective-section">
+        <div class="panel__header"><div><span class="form-section__step">02</span><h2 id="objective-section">Objetivo e risco</h2><p>Comece pelo resultado que a organização quer proteger e pelo acontecimento que o ameaça.</p></div></div>
+        <div class="panel__body form-grid form-grid--2">
+            <div class="form-field">{{ form.objective_category.label_tag }}{{ form.objective_category }}{{ form.objective_category.errors }}</div>
+            <div class="form-field form-field--empty" aria-hidden="true"></div>
+            <div class="form-field">{{ form.objective_statement.label_tag }}{{ form.objective_statement }}{{ form.objective_statement.errors }}</div>
+            <div class="form-field">{{ form.risk_statement.label_tag }}{{ form.risk_statement }}{{ form.risk_statement.errors }}</div>
+        </div>
+    </section>
+
+    <section class="panel form-section" aria-labelledby="control-section">
+        <div class="panel__header"><div><span class="form-section__step">03</span><h2 id="control-section">Controlo definido pela empresa</h2><p>Descreva a ação que reduz o risco e a função organizacional responsável.</p></div></div>
+        <div class="panel__body form-grid form-grid--2">
+            <div class="form-field">{{ form.control_name.label_tag }}{{ form.control_name }}{{ form.control_name.errors }}</div>
+            <div class="form-field">{{ form.control_owner_role.label_tag }}{{ form.control_owner_role }}{{ form.control_owner_role.errors }}</div>
+            <div class="form-field form-field--span-2">{{ form.control_description.label_tag }}{{ form.control_description }}{{ form.control_description.errors }}</div>
+            <div class="form-field">{{ form.control_type.label_tag }}{{ form.control_type }}{{ form.control_type.errors }}</div>
+            <div class="form-field">{{ form.control_frequency.label_tag }}{{ form.control_frequency }}{{ form.control_frequency.errors }}</div>
+        </div>
+    </section>
+
+    <section class="panel form-section" aria-labelledby="monitoring-section">
+        <div class="panel__header"><div><span class="form-section__step">04</span><h2 id="monitoring-section">Monitorização e regra</h2><p>Defina como as exceções serão acompanhadas. A regra técnica permanece versionada e explicável.</p></div><span class="badge badge--info">DUPLICATE_INVOICE_EXACT v1</span></div>
+        <div class="panel__body">
+            <div class="form-grid form-grid--2">
+                <div class="form-field">{{ form.reviewer_role.label_tag }}{{ form.reviewer_role }}{{ form.reviewer_role.errors }}</div>
+                <div class="form-field">{{ form.review_due_days.label_tag }}{{ form.review_due_days }}{{ form.review_due_days.errors }}</div>
+                <div class="form-field">{{ form.indicator_target.label_tag }}{{ form.indicator_target }}{{ form.indicator_target.errors }}<span class="helptext">{{ form.indicator_target.help_text }}</span></div>
+                <div class="form-field">{{ form.rule_severity.label_tag }}{{ form.rule_severity }}{{ form.rule_severity.errors }}</div>
+            </div>
+            <div class="callout section-space">
+                <span class="callout__icon" aria-hidden="true">i</span>
+                <div><strong>Indicador não é uma conclusão</strong><p>O objetivo do indicador ajuda a acompanhar o controlo. Um resultado fora do objetivo não prova, por si só, falha, fraude ou ineficácia.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <div class="scenario-form__actions">
+        <a class="button button--secondary" href="{% url 'control_scenarios:list' organization.id %}">Cancelar</a>
+        <button class="button button--primary" type="submit">Guardar rascunho</button>
+    </div>
+</form>
+{% endblock %}

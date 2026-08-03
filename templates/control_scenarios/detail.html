@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}{{ version.name }} — AuditFlow AI{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'control_scenarios:list' organization.id %}">← Voltar aos cenários</a>
+
+<header class="page-header">
+    <div class="page-header__copy">
+        <span class="eyebrow">Cenário de controlo · {{ scenario.key }}</span>
+        <h1>{{ version.name }}</h1>
+        <p class="page-description">{{ version.description }}</p>
+    </div>
+    <div class="page-actions">
+        <span class="badge badge--{{ version.state }}">{{ version.get_state_display }}</span>
+        {% if scenario.active_version_id %}<span class="badge badge--success">Ativo</span>{% else %}<span class="badge">Inativo</span>{% endif %}
+    </div>
+</header>
+
+<section class="summary-strip" aria-label="Resumo do cenário">
+    <div class="summary-strip__item"><span class="summary-strip__label">Versão</span><span class="summary-strip__value">v{{ version.version }}</span></div>
+    <div class="summary-strip__item"><span class="summary-strip__label">Governação</span><span class="summary-strip__value">{{ version.get_state_display }}</span></div>
+    <div class="summary-strip__item"><span class="summary-strip__label">Estado operacional</span><span class="summary-strip__value">{% if scenario.active_version_id %}Ativo{% else %}Inativo{% endif %}</span></div>
+    <div class="summary-strip__item"><span class="summary-strip__label">Criado em</span><span class="summary-strip__value">{{ version.created_at|date:"d/m/Y H:i" }}</span></div>
+</section>
+
+{% if version.state == "draft" %}
+    <div class="callout callout--warning">
+        <span class="callout__icon" aria-hidden="true">!</span>
+        <div><strong>Rascunho não executável</strong><p>Esta configuração ainda pode ser revista, mas não pode ser usada em importações. A aprovação por um proprietário será implementada na próxima etapa.</p></div>
+    </div>
+{% endif %}
+
+<section class="scenario-flow section-space" aria-label="Sequência do cenário de controlo">
+    <article class="definition-card">
+        <span class="definition-card__number">01</span>
+        <span class="definition-card__label">Objetivo</span>
+        <span class="badge badge--info">{{ category_label }}</span>
+        <p>{{ version.objective.statement }}</p>
+    </article>
+    <article class="definition-card">
+        <span class="definition-card__number">02</span>
+        <span class="definition-card__label">Risco</span>
+        <p>{{ version.risk.statement }}</p>
+    </article>
+    <article class="definition-card">
+        <span class="definition-card__number">03</span>
+        <span class="definition-card__label">Controlo</span>
+        <strong>{{ version.control.name }}</strong>
+        <p>{{ version.control.description }}</p>
+        <div class="definition-card__meta"><span>{{ control_type_label }}</span><span>{{ control_frequency_label }}</span></div>
+    </article>
+</section>
+
+<div class="grid-sidebar section-space">
+    <div>
+        <section class="panel" aria-labelledby="monitoring-title">
+            <div class="panel__header"><div><h2 id="monitoring-title">Indicador e acompanhamento</h2><p>Medida determinística usada para acompanhar as exceções do cenário.</p></div></div>
+            <div class="panel__body">
+                {% if indicator %}
+                    <div class="indicator-card">
+                        <div><span class="eyebrow">Indicador de controlo</span><h3>{{ indicator.name }}</h3><p>{{ indicator.description }}</p></div>
+                        <div class="indicator-card__target"><span>Objetivo</span><strong>{{ indicator.target.operator }} {{ indicator.target.value }}</strong><small>{{ indicator.unit }} · {{ indicator.measurement.window }}</small></div>
+                    </div>
+                    <dl class="detail-list section-space">
+                        <div><dt>Função revisora</dt><dd>{{ version.monitoring.reviewer_role }}</dd></div>
+                        <div><dt>Prazo interno</dt><dd>{{ version.monitoring.review_due_days }} dias</dd></div>
+                        <div><dt>Métrica</dt><dd><code>{{ indicator.measurement.metric_key }} v{{ indicator.measurement.metric_version }}</code></dd></div>
+                        <div><dt>Direção</dt><dd><code>{{ indicator.direction }}</code></dd></div>
+                    </dl>
+                {% else %}
+                    <div class="empty-state"><p>O rascunho ainda não possui um indicador configurado.</p></div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="panel section-space" aria-labelledby="rule-title">
+            <div class="panel__header"><div><h2 id="rule-title">Regra associada</h2><p>Teste técnico registado e versionado que produzirá correspondências.</p></div>{% if rule %}<span class="badge badge--{{ rule.severity }}">{{ rule_severity_label }}</span>{% endif %}</div>
+            <div class="panel__body">
+                {% if rule %}
+                    <dl class="detail-list">
+                        <div><dt>Regra</dt><dd><code>{{ rule.key }} v{{ rule.version }}</code></dd></div>
+                        <div><dt>Origem</dt><dd>{{ rule.origin.type }}</dd></div>
+                        <div style="grid-column: 1 / -1;"><dt>Finalidade</dt><dd>{{ rule.purpose }}</dd></div>
+                    </dl>
+                    <div class="callout callout--warning section-space"><span class="callout__icon" aria-hidden="true">!</span><div><strong>Correspondência, não conclusão</strong><p>A regra identifica apenas registos que satisfazem os critérios. Qualquer conclusão exige investigação humana.</p></div></div>
+                {% else %}
+                    <div class="empty-state"><p>O rascunho ainda não possui uma regra associada.</p></div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <aside>
+        <section class="panel" aria-labelledby="governance-title">
+            <div class="panel__header"><div><h2 id="governance-title">Governação</h2><p>Identidade e responsabilidade preservadas.</p></div></div>
+            <div class="panel__body">
+                <dl class="detail-list detail-list--single">
+                    <div><dt>Organização</dt><dd>{{ version.organization_name }}</dd></div>
+                    <div><dt>Criado por</dt><dd>{{ version.created_by_email }}<span class="table-secondary">{{ version.get_created_by_role_display }}</span></dd></div>
+                    <div><dt>Motivo da configuração</dt><dd>{{ version.change_reason }}</dd></div>
+                    <div><dt>Função responsável pelo controlo</dt><dd>{{ version.control.owner_role }}</dd></div>
+                    <div><dt>Identificador do cenário</dt><dd><code>{{ scenario.id }}</code></dd></div>
+                    <div><dt>Identificador da versão</dt><dd><code>{{ version.id }}</code></dd></div>
+                </dl>
+            </div>
+        </section>
+
+        <section class="panel section-space" aria-labelledby="versions-title">
+            <div class="panel__header"><div><h2 id="versions-title">Histórico de versões</h2><p>Evolução da configuração.</p></div></div>
+            <div class="panel__body">
+                <ol class="decision-timeline">
+                    {% for item in scenario.ordered_versions %}
+                        <li><strong>Versão {{ item.version }} · {{ item.get_state_display }}</strong><div class="decision-timeline__meta">{{ item.created_at|date:"d/m/Y H:i" }} · {{ item.created_by_email }}</div>{% if item.config_hash %}<code class="table-secondary">{{ item.config_hash }}</code>{% endif %}</li>
+                    {% endfor %}
+                </ol>
+            </div>
+        </section>
+    </aside>
+</div>
+{% endblock %}

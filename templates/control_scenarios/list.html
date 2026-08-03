@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Cenários de controlo — AuditFlow AI{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <div class="page-header__copy">
+        <span class="eyebrow">Configuração da organização</span>
+        <h1>Cenários de controlo</h1>
+        <p class="page-description">
+            Documente como os objetivos, riscos, controlos, indicadores e regras da
+            {{ organization.name }} se relacionam. Cada versão conserva a respetiva
+            governação e rastreabilidade.
+        </p>
+    </div>
+    {% if can_create %}
+        <div class="page-actions">
+            <a class="button button--primary" href="{% url 'control_scenarios:create' organization.id %}">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                Criar cenário
+            </a>
+        </div>
+    {% endif %}
+</header>
+
+<div class="callout">
+    <span class="callout__icon" aria-hidden="true">i</span>
+    <div>
+        <strong>Governação antes da execução</strong>
+        <p>Um rascunho pode ser preparado por um proprietário ou analista. Apenas uma versão posteriormente aprovada, em vigor e ativada poderá ser usada em novas análises.</p>
+    </div>
+</div>
+
+<section class="panel section-space" aria-labelledby="scenario-list-title">
+    <div class="panel__header">
+        <div>
+            <h2 id="scenario-list-title">Cenários da organização</h2>
+            {% if page.object_list %}<p>{{ page.paginator.count }} cenário{{ page.paginator.count|pluralize }} configurado{{ page.paginator.count|pluralize }}.</p>{% else %}<p>Configurações próprias da {{ organization.name }}.</p>{% endif %}
+        </div>
+        {% if page.object_list %}<span class="badge badge--info">{{ page.paginator.count }} total</span>{% endif %}
+    </div>
+
+    {% if page.object_list %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr><th>Cenário</th><th>Versão</th><th>Governação</th><th>Estado operacional</th><th>Criado por</th><th>Atualizado em</th></tr></thead>
+                <tbody>
+                    {% for scenario in page.object_list %}
+                        {% with version=scenario.ordered_versions.0 %}
+                            <tr>
+                                <td>
+                                    <a class="table-primary" href="{% url 'control_scenarios:detail' organization.id scenario.id %}">{{ version.name|default:scenario.key }}</a>
+                                    <code class="table-secondary">{{ scenario.key }}</code>
+                                </td>
+                                <td>{% if version %}<span class="badge">v{{ version.version }}</span>{% else %}—{% endif %}</td>
+                                <td>{% if version %}<span class="badge badge--{{ version.state }}">{{ version.get_state_display }}</span>{% else %}<span class="badge badge--danger">Sem versão</span>{% endif %}</td>
+                                <td>{% if scenario.active_version_id %}<span class="badge badge--success">Ativo</span>{% else %}<span class="badge">Inativo</span>{% endif %}</td>
+                                <td>{% if version %}{{ version.created_by_email }}{% else %}—{% endif %}</td>
+                                <td>{{ scenario.updated_at|date:"d/m/Y H:i" }}</td>
+                            </tr>
+                        {% endwith %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if page.has_other_pages %}
+            <nav class="pagination" aria-label="Paginação dos cenários de controlo">
+                {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">Anterior</a>{% endif %}
+                <span>Página {{ page.number }} de {{ page.paginator.num_pages }}</span>
+                {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Seguinte</a>{% endif %}
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-state__icon" aria-hidden="true">◇</div>
+            <h3>Ainda não existem cenários</h3>
+            <p>Crie o primeiro rascunho para documentar um objetivo, o respetivo risco e o controlo definido pela organização.</p>
+            {% if can_create %}<a class="button button--primary empty-state__action" href="{% url 'control_scenarios:create' organization.id %}">Criar primeiro cenário</a>{% endif %}
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

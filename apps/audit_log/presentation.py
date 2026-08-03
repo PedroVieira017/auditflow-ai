@@ -9,6 +9,7 @@ ACTION_LABELS = {
     "rule_run.failed": "Execução de regra falhou",
     "alert.status_changed": "Estado do alerta alterado",
     "dossier.generated": "Dossier gerado",
+    "control_scenario.draft_created": "Rascunho de cenário criado",
 }
 
 RESOURCE_LABELS = {
@@ -16,6 +17,7 @@ RESOURCE_LABELS = {
     "import_batch": "Importação",
     "rule_run": "Execução de regra",
     "work_dossier": "Dossier",
+    "control_scenario_version": "Versão do cenário",
 }
 
 ACTION_DETAIL_FIELDS = {
@@ -54,6 +56,12 @@ ACTION_DETAIL_FIELDS = {
         ("format", "Formato", True),
         ("import_batch_id", "Importação", True),
         ("payload_hash", "SHA-256 do payload", True),
+    ),
+    "control_scenario.draft_created": (
+        ("scenario_key", "Chave do cenário", True),
+        ("scenario_version", "Versão", False),
+        ("state", "Estado", True),
+        ("scenario_id", "Cenário", True),
     ),
 }
 
