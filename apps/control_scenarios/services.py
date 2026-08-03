@@ -1,5 +1,6 @@
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
 from apps.audit_log.models import AuditEvent
 from apps.organizations.models import Membership
@@ -9,6 +10,10 @@ from .models import ControlScenario, ControlScenarioVersion
 
 
 class DuplicateControlScenarioKeyError(ValueError):
+    pass
+
+
+class ControlScenarioApprovalError(ValueError):
     pass
 
 
@@ -150,5 +155,75 @@ def create_control_scenario_draft(*, membership, created_by, data):
         raise DuplicateControlScenarioKeyError(
             "Já existe um cenário com esta chave na organização."
         ) from exc
+
+    return version
+
+
+def approve_control_scenario_version(
+    *,
+    membership,
+    approved_by,
+    scenario_id,
+    version_id,
+    effective_from,
+    approval_note,
+):
+    if (
+        not membership.is_active
+        or membership.user_id != approved_by.id
+        or membership.role != Membership.Role.OWNER
+    ):
+        raise PermissionDenied(
+            "Apenas um proprietário ativo pode aprovar cenários."
+        )
+
+    with transaction.atomic():
+        version = (
+            ControlScenarioVersion.objects.select_for_update()
+            .select_related("scenario", "organization")
+            .filter(
+                id=version_id,
+                scenario_id=scenario_id,
+                organization_id=membership.organization_id,
+            )
+            .first()
+        )
+        if version is None:
+            raise PermissionDenied(
+                "A versão não pertence ao cenário e à organização indicados."
+            )
+        if version.state != ControlScenarioVersion.State.DRAFT:
+            raise ControlScenarioApprovalError(
+                "Esta versão já não se encontra em rascunho."
+            )
+
+        approved_at = timezone.now()
+        version.state = ControlScenarioVersion.State.APPROVED
+        version.approved_by = approved_by
+        version.approved_by_email = approved_by.email
+        version.approved_by_user_id = approved_by.id
+        version.approved_by_role = Membership.Role.OWNER
+        version.approved_at = approved_at
+        version.effective_from = effective_from
+        version.approval_note = approval_note.strip()
+        version.save()
+        version.refresh_from_db()
+
+        AuditEvent.objects.create(
+            organization=membership.organization,
+            actor=approved_by,
+            action="control_scenario.approved",
+            resource_type="control_scenario_version",
+            resource_id=version.id,
+            metadata={
+                "config_hash": version.config_hash,
+                "creator_is_approver": version.created_by_user_id
+                == approved_by.id,
+                "effective_from": version.effective_from.isoformat(),
+                "scenario_id": str(version.scenario_id),
+                "scenario_key": version.scenario.key,
+                "scenario_version": version.version,
+            },
+        )
 
     return version

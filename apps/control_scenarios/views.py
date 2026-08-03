@@ -1,10 +1,11 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Prefetch
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from apps.core.choices import Severity
 from apps.organizations.access import get_active_membership
@@ -14,11 +15,14 @@ from .forms import (
     CONTROL_FREQUENCY_CHOICES,
     CONTROL_TYPE_CHOICES,
     OBJECTIVE_CATEGORY_CHOICES,
+    ControlScenarioApprovalForm,
     ControlScenarioDraftForm,
 )
 from .models import ControlScenario, ControlScenarioVersion
 from .services import (
+    ControlScenarioApprovalError,
     DuplicateControlScenarioKeyError,
+    approve_control_scenario_version,
     create_control_scenario_draft,
 )
 
@@ -141,6 +145,10 @@ def control_scenario_detail(request, organization_id, scenario_id):
     if not scenario.ordered_versions:
         raise Http404("O cenário não possui versões.")
     version = scenario.ordered_versions[0]
+    can_approve = (
+        membership.role == Membership.Role.OWNER
+        and version.state == ControlScenarioVersion.State.DRAFT
+    )
     rule = version.rules[0] if version.rules else None
     indicators = (
         version.monitoring.get("indicators", [])
@@ -152,6 +160,12 @@ def control_scenario_detail(request, organization_id, scenario_id):
         request,
         "control_scenarios/detail.html",
         {
+            "approval_form": (
+                ControlScenarioApprovalForm(version=version)
+                if can_approve
+                else None
+            ),
+            "can_approve": can_approve,
             "category_label": dict(OBJECTIVE_CATEGORY_CHOICES).get(
                 version.objective.get("category"),
                 version.objective.get("category"),
@@ -174,4 +188,73 @@ def control_scenario_detail(request, organization_id, scenario_id):
             "scenario": scenario,
             "version": version,
         },
+    )
+
+
+@login_required
+@require_POST
+def control_scenario_approve(request, organization_id, scenario_id):
+    membership = get_active_membership(
+        user=request.user,
+        organization_id=organization_id,
+    )
+    if membership.role != Membership.Role.OWNER:
+        raise PermissionDenied("Apenas um proprietário pode aprovar cenários.")
+
+    scenario = get_object_or_404(
+        ControlScenario.objects.for_organization(membership.organization),
+        id=scenario_id,
+    )
+    version = (
+        ControlScenarioVersion.objects.for_organization(
+            membership.organization
+        )
+        .filter(scenario=scenario)
+        .order_by("-version")
+        .first()
+    )
+    if version is None:
+        raise Http404("O cenário não possui versões.")
+
+    form = ControlScenarioApprovalForm(request.POST, version=version)
+    if not form.is_valid():
+        error_messages = [
+            message
+            for errors in form.errors.values()
+            for message in errors
+        ]
+        messages.error(
+            request,
+            "Não foi possível aprovar a versão. " + " ".join(error_messages),
+        )
+    elif form.cleaned_data["expected_version_id"] != version.id:
+        messages.error(
+            request,
+            "A versão apresentada foi alterada. Reveja o cenário antes de aprovar.",
+        )
+    else:
+        try:
+            approve_control_scenario_version(
+                membership=membership,
+                approved_by=request.user,
+                scenario_id=scenario.id,
+                version_id=version.id,
+                effective_from=form.cleaned_data["effective_from"],
+                approval_note=form.cleaned_data["approval_note"],
+            )
+        except (ControlScenarioApprovalError, ValidationError) as exc:
+            messages.error(
+                request,
+                f"Não foi possível aprovar a versão. {exc}",
+            )
+        else:
+            messages.success(
+                request,
+                "A versão do cenário foi aprovada e o snapshot foi preservado.",
+            )
+
+    return redirect(
+        "control_scenarios:detail",
+        organization_id=membership.organization_id,
+        scenario_id=scenario.id,
     )

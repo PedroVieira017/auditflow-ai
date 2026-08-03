@@ -1,6 +1,9 @@
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.audit_log.models import AuditEvent
 from apps.organizations.models import Membership, Organization
@@ -81,6 +84,16 @@ class ControlScenarioViewsTests(TestCase):
         self.client.force_login(self.analyst)
         response = self.client.post(self.create_url, form_data())
         return response, ControlScenario.objects.get()
+
+    def scenario_urls(self, scenario):
+        kwargs = {
+            "organization_id": self.organization.id,
+            "scenario_id": scenario.id,
+        }
+        return (
+            reverse("control_scenarios:detail", kwargs=kwargs),
+            reverse("control_scenarios:approve", kwargs=kwargs),
+        )
 
     def test_unauthenticated_user_is_redirected_to_login(self):
         response = self.client.get(self.list_url)
@@ -194,3 +207,101 @@ class ControlScenarioViewsTests(TestCase):
         response = self.client.get(self.list_url)
 
         self.assertEqual(response.status_code, 404)
+
+    def test_only_owner_sees_approval_form_on_draft(self):
+        _, scenario = self.create_draft_through_view()
+        detail_url, approval_url = self.scenario_urls(scenario)
+
+        analyst_response = self.client.get(detail_url)
+        self.client.force_login(self.owner)
+        owner_response = self.client.get(detail_url)
+
+        self.assertNotContains(analyst_response, approval_url)
+        self.assertContains(analyst_response, "Aprovação pendente")
+        self.assertContains(owner_response, approval_url)
+        self.assertContains(owner_response, "Aprovar versão", count=2)
+        self.assertContains(owner_response, "A aprovação é imutável")
+
+    def test_owner_approves_version_and_sees_preserved_snapshot(self):
+        _, scenario = self.create_draft_through_view()
+        detail_url, approval_url = self.scenario_urls(scenario)
+        version = ControlScenarioVersion.objects.get()
+        note = "Revisei o objetivo, o risco, o controlo e a regra configurados."
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            approval_url,
+            {
+                "expected_version_id": str(version.id),
+                "effective_from": timezone.localdate().isoformat(),
+                "approval_note": note,
+            },
+            follow=True,
+        )
+
+        self.assertRedirects(response, detail_url)
+        self.assertContains(
+            response,
+            "A versão do cenário foi aprovada e o snapshot foi preservado.",
+        )
+        self.assertContains(response, "Snapshot aprovado e preservado")
+        self.assertContains(response, note)
+        self.assertContains(response, self.owner.email)
+        self.assertNotContains(response, approval_url)
+        version.refresh_from_db()
+        self.assertEqual(version.state, ControlScenarioVersion.State.APPROVED)
+        self.assertContains(response, version.config_hash)
+        scenario.refresh_from_db()
+        self.assertIsNone(scenario.active_version_id)
+        self.assertTrue(
+            AuditEvent.objects.filter(
+                action="control_scenario.approved",
+                resource_id=version.id,
+            ).exists()
+        )
+
+    def test_analyst_cannot_post_approval(self):
+        _, scenario = self.create_draft_through_view()
+        _, approval_url = self.scenario_urls(scenario)
+        version = ControlScenarioVersion.objects.get()
+
+        response = self.client.post(
+            approval_url,
+            {
+                "expected_version_id": str(version.id),
+                "effective_from": timezone.localdate().isoformat(),
+                "approval_note": "Tentativa de aprovação pelo analista.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 403)
+        version.refresh_from_db()
+        self.assertEqual(version.state, ControlScenarioVersion.State.DRAFT)
+
+    def test_past_effective_date_does_not_approve_version(self):
+        _, scenario = self.create_draft_through_view()
+        _, approval_url = self.scenario_urls(scenario)
+        version = ControlScenarioVersion.objects.get()
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            approval_url,
+            {
+                "expected_version_id": str(version.id),
+                "effective_from": (
+                    timezone.localdate() - timedelta(days=1)
+                ).isoformat(),
+                "approval_note": "Revisei a configuração apresentada.",
+            },
+            follow=True,
+        )
+
+        self.assertContains(
+            response,
+            "A entrada em vigor não pode ser anterior à data atual.",
+        )
+        version.refresh_from_db()
+        self.assertEqual(version.state, ControlScenarioVersion.State.DRAFT)
+        self.assertFalse(
+            AuditEvent.objects.filter(action="control_scenario.approved").exists()
+        )

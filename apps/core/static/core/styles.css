@@ -919,6 +919,7 @@ input[type="text"],
 input[type="email"],
 input[type="password"],
 input[type="file"],
+input[type="date"],
 select,
 textarea {
     width: 100%;
@@ -1735,6 +1736,24 @@ input[type="file"]::file-selector-button {
 
 .detail-list--single > div:nth-last-child(2) {
     border-bottom: 1px solid #edf0f4;
+}
+
+.approval-form {
+    display: grid;
+    gap: 16px;
+}
+
+.approval-form .callout {
+    margin: 2px 0 0;
+    padding: 13px;
+}
+
+.approval-form__submit {
+    width: 100%;
+}
+
+.hash-value {
+    overflow-wrap: anywhere;
 }
 
 @media (max-width: 860px) {

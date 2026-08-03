@@ -27,7 +27,12 @@
 {% if version.state == "draft" %}
     <div class="callout callout--warning">
         <span class="callout__icon" aria-hidden="true">!</span>
-        <div><strong>Rascunho não executável</strong><p>Esta configuração ainda pode ser revista, mas não pode ser usada em importações. A aprovação por um proprietário será implementada na próxima etapa.</p></div>
+        <div><strong>Rascunho não executável</strong><p>Esta configuração ainda pode ser revista, mas não pode ser usada em importações. A aprovação cria um snapshot imutável; a ativação será sempre uma ação separada.</p></div>
+    </div>
+{% elif version.state == "approved" %}
+    <div class="callout callout--success">
+        <span class="callout__icon" aria-hidden="true">✓</span>
+        <div><strong>Snapshot aprovado e preservado</strong><p>A versão aprovada já não pode ser alterada. O cenário permanece inativo até existir uma decisão explícita de ativação.</p></div>
     </div>
 {% endif %}
 
@@ -92,13 +97,51 @@
     </div>
 
     <aside>
-        <section class="panel" aria-labelledby="governance-title">
+        {% if can_approve %}
+            <section class="panel" aria-labelledby="approval-title">
+                <div class="panel__header"><div><h2 id="approval-title">Aprovar versão</h2><p>Decisão reservada ao proprietário da organização.</p></div></div>
+                <div class="panel__body">
+                    <form method="post" action="{% url 'control_scenarios:approve' organization.id scenario.id %}" class="approval-form">
+                        {% csrf_token %}
+                        {{ approval_form.expected_version_id }}
+                        <div class="form-field">
+                            {{ approval_form.effective_from.label_tag }}
+                            {{ approval_form.effective_from }}
+                            <span class="field-help">{{ approval_form.effective_from.help_text }}</span>
+                        </div>
+                        <div class="form-field">
+                            {{ approval_form.approval_note.label_tag }}
+                            {{ approval_form.approval_note }}
+                            <span class="field-help">{{ approval_form.approval_note.help_text }}</span>
+                        </div>
+                        <div class="callout callout--warning">
+                            <span class="callout__icon" aria-hidden="true">!</span>
+                            <div><strong>A aprovação é imutável</strong><p>Confirme que reviu o objetivo, o risco, o controlo, o indicador e a regra desta versão.</p></div>
+                        </div>
+                        <button class="button button--primary approval-form__submit" type="submit">Aprovar versão</button>
+                    </form>
+                </div>
+            </section>
+        {% elif version.state == "draft" %}
+            <div class="callout callout--warning">
+                <span class="callout__icon" aria-hidden="true">!</span>
+                <div><strong>Aprovação pendente</strong><p>Apenas um proprietário ativo da organização pode aprovar esta versão.</p></div>
+            </div>
+        {% endif %}
+
+        <section class="panel {% if version.state == 'draft' and not can_approve %}section-space{% endif %}" aria-labelledby="governance-title">
             <div class="panel__header"><div><h2 id="governance-title">Governação</h2><p>Identidade e responsabilidade preservadas.</p></div></div>
             <div class="panel__body">
                 <dl class="detail-list detail-list--single">
                     <div><dt>Organização</dt><dd>{{ version.organization_name }}</dd></div>
                     <div><dt>Criado por</dt><dd>{{ version.created_by_email }}<span class="table-secondary">{{ version.get_created_by_role_display }}</span></dd></div>
                     <div><dt>Motivo da configuração</dt><dd>{{ version.change_reason }}</dd></div>
+                    {% if version.state == "approved" %}
+                        <div><dt>Aprovado por</dt><dd>{{ version.approved_by_email }}<span class="table-secondary">{{ version.get_approved_by_role_display }} · {{ version.approved_at|date:"d/m/Y H:i" }}</span></dd></div>
+                        <div><dt>Entrada em vigor</dt><dd>{{ version.effective_from|date:"d/m/Y" }}</dd></div>
+                        <div><dt>Nota de aprovação</dt><dd>{{ version.approval_note }}</dd></div>
+                        <div><dt>SHA-256 da configuração</dt><dd><code class="hash-value">{{ version.config_hash }}</code></dd></div>
+                    {% endif %}
                     <div><dt>Função responsável pelo controlo</dt><dd>{{ version.control.owner_role }}</dd></div>
                     <div><dt>Identificador do cenário</dt><dd><code>{{ scenario.id }}</code></dd></div>
                     <div><dt>Identificador da versão</dt><dd><code>{{ version.id }}</code></dd></div>

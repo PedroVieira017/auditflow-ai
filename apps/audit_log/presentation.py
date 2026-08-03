@@ -10,6 +10,7 @@ ACTION_LABELS = {
     "alert.status_changed": "Estado do alerta alterado",
     "dossier.generated": "Dossier gerado",
     "control_scenario.draft_created": "Rascunho de cenário criado",
+    "control_scenario.approved": "Cenário de controlo aprovado",
 }
 
 RESOURCE_LABELS = {
@@ -62,6 +63,13 @@ ACTION_DETAIL_FIELDS = {
         ("scenario_version", "Versão", False),
         ("state", "Estado", True),
         ("scenario_id", "Cenário", True),
+    ),
+    "control_scenario.approved": (
+        ("scenario_key", "Chave do cenário", True),
+        ("scenario_version", "Versão", False),
+        ("effective_from", "Entrada em vigor", False),
+        ("config_hash", "SHA-256 da configuração", True),
+        ("creator_is_approver", "Criador também aprovou", False),
     ),
 }
 

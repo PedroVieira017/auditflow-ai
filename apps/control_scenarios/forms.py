@@ -1,4 +1,5 @@
 from django import forms
+from django.utils import timezone
 
 from apps.core.choices import Severity
 
@@ -147,3 +148,37 @@ class ControlScenarioDraftForm(forms.Form):
                 "Já existe um cenário com esta chave na organização."
             )
         return key
+
+
+class ControlScenarioApprovalForm(forms.Form):
+    effective_from = forms.DateField(
+        label="Data de entrada em vigor",
+        widget=forms.DateInput(attrs={"type": "date"}),
+        help_text=(
+            "A aprovação cria o snapshot agora; a entrada em vigor não ativa "
+            "automaticamente o cenário."
+        ),
+    )
+    approval_note = forms.CharField(
+        label="Nota de aprovação",
+        max_length=2_000,
+        min_length=10,
+        widget=forms.Textarea(attrs={"rows": 4}),
+        help_text=(
+            "Confirme o que foi revisto e por que razão a configuração é aceite."
+        ),
+    )
+    expected_version_id = forms.UUIDField(widget=forms.HiddenInput)
+
+    def __init__(self, *args, version, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["effective_from"].initial = timezone.localdate()
+        self.fields["expected_version_id"].initial = version.id
+
+    def clean_effective_from(self):
+        effective_from = self.cleaned_data["effective_from"]
+        if effective_from < timezone.localdate():
+            raise forms.ValidationError(
+                "A entrada em vigor não pode ser anterior à data atual."
+            )
+        return effective_from
